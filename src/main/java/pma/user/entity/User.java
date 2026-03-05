@@ -1,12 +1,14 @@
 package pma.user.entity;
 
 import java.sql.Date;
+import java.util.Set;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.Getter;
 
@@ -22,6 +24,9 @@ public class User {
     @Column(name = "Email", nullable = false, unique = true, length = 255)
     private String email;
 
+    @Column(name = "Username", nullable = false, unique = true, length = 100)
+    private String username;
+
     @Column(name = "Password", nullable = false, length = 500)
     private String password;
 
@@ -33,4 +38,7 @@ public class User {
 
     @Column(name = "CreatedAt", nullable = false)
     private Date createdAt;
+
+    @OneToMany(mappedBy = "user")
+    private Set<UserRole> userRoles;
 }
