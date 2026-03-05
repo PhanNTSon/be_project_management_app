@@ -1,4 +1,4 @@
-package pma.feature_user.entity.repository;
+package pma.user.repository;
 
 import javax.management.relation.Role;
 

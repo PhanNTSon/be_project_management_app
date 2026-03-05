@@ -1,4 +1,4 @@
-package pma.feature_user.entity;
+package pma.user.entity;
 
 import java.sql.Date;
 
