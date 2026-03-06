@@ -8,7 +8,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
@@ -21,7 +20,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import pma.user.entity.Role;
 import pma.user.entity.User;
-import pma.user.entity.UserRole;
 import pma.user.repository.UserRepo;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,7 +34,7 @@ public class CustomUserDetailServiceTest {
     @Test
     void loadUserByUsername_UserFound_ShouldReturnUserDetails() {
         // 1. Arrange (Chuẩn bị dữ liệu)
-        String username = "testuser";
+        String username = "testUser";
 
         Role role = new Role("ROLE_USER", "Regular user role");
 

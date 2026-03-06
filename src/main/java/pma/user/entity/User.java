@@ -1,7 +1,7 @@
 package pma.user.entity;
 
-import java.sql.Date;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Set;
 
 import jakarta.persistence.Column;
@@ -57,6 +57,7 @@ public class User {
         this.fullName = fullName;
         this.isActive = true;
         this.createdAt = LocalDateTime.now();
+        this.userRoles = new HashSet<>();
     }
 
     private void validateEmail(String email){
