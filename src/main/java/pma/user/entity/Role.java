@@ -9,11 +9,14 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "Role")
 @Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Role {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,4 +31,9 @@ public class Role {
 
     @OneToMany(mappedBy = "role")
     private Set<UserRole> userRoles;
+
+    public Role(String roleName, String description) {
+        this.roleName = roleName;
+        this.description = description;
+    }
 }
