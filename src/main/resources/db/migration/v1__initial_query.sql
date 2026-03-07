@@ -1,10 +1,4 @@
 -- Active: 1759823412677@@127.0.0.1@1433@master
-CREATE DATABASE SRS_SMART_MANAGEMENT_DB
-GO
-
-USE SRS_SMART_MANAGEMENT_DB
-GO
-
 --- USER & ROLE
 CREATE TABLE [User] (
     UserId BIGINT IDENTITY PRIMARY KEY,
@@ -15,7 +9,7 @@ CREATE TABLE [User] (
     CreatedAt DATETIME2 NOT NULL DEFAULT SYSDATETIME()
 );
 
-CREATE TABLE Role (
+CREATE TABLE [Role] (
     RoleId BIGINT IDENTITY PRIMARY KEY,
     RoleName NVARCHAR(100) NOT NULL UNIQUE,
     Description NVARCHAR(500)
@@ -26,6 +20,18 @@ CREATE TABLE UserRole (
     PRIMARY KEY (UserId, RoleId),
     FOREIGN KEY (UserId) REFERENCES [User](UserId),
     FOREIGN KEY (RoleId) REFERENCES Role(RoleId)
+);
+
+--- PROJECT DOMAIN
+CREATE TABLE Project (
+    ProjectId INT IDENTITY PRIMARY KEY,
+    ProjectName NVARCHAR(255) NOT NULL,
+    Description NVARCHAR(MAX),
+    ContextDiagramUrl TEXT,
+    OwnerId BIGINT NOT NULL,
+    TemplateId INT,
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    FOREIGN KEY (OwnerId) REFERENCES [User](UserId)
 );
 
 CREATE TABLE ProjectMember(
@@ -44,18 +50,6 @@ CREATE TABLE ProjectInvitation(
     Status NVARCHAR(50) NOT NULL DEFAULT 'Pending',
     SentAt DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
     FOREIGN KEY (ProjectId) REFERENCES Project(ProjectId)
-);
-
---- PROJECT DOMAIN
-CREATE TABLE Project (
-    ProjectId INT IDENTITY PRIMARY KEY,
-    ProjectName NVARCHAR(255) NOT NULL,
-    Description NVARCHAR(MAX),
-    ContextDiagramUrl TEXT,
-    OwnerId BIGINT NOT NULL,
-    TemplateId INT,
-    CreatedAt DATETIME DEFAULT GETDATE(),
-    FOREIGN KEY (OwnerId) REFERENCES [User](UserId),
 );
 
 CREATE TABLE VisionScope(
