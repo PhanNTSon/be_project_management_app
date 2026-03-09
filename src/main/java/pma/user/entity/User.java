@@ -30,8 +30,8 @@ public class User {
     @Column(name = "Username", nullable = false, unique = true, length = 100)
     private String username;
 
-    @Column(name = "Password", nullable = false, length = 500)
-    private String password;
+    @Column(name = "PasswordHash", nullable = false, length = 500)
+    private String passwordHash;
 
     @Column(name = "FullName", length = 255)
     private String fullName;
@@ -45,6 +45,9 @@ public class User {
     @OneToMany(mappedBy = "user")
     private Set<UserRole> userRoles;
 
+    @OneToMany(mappedBy = "user")
+    private Set<RefreshToken> refreshTokens;
+
     public User(String email, String username, String password, String fullName) {
 
         validateEmail(email);
@@ -53,7 +56,7 @@ public class User {
 
         this.email = email;
         this.username = username;
-        this.password = password;
+        this.passwordHash = password;
         this.fullName = fullName;
         this.isActive = true;
         this.createdAt = LocalDateTime.now();
@@ -67,7 +70,7 @@ public class User {
 
         this.email = email;
         this.username = username;
-        this.password = password;
+        this.passwordHash = password;
         this.fullName = "";
         this.isActive = true;
         this.createdAt = LocalDateTime.now();
@@ -99,7 +102,7 @@ public class User {
 
     public void changePassword(String newPassword) {
         validatePassword(newPassword);
-        this.password = newPassword;
+        this.passwordHash = newPassword;
     }
 
     public void changeFullName(String newFullName) {
