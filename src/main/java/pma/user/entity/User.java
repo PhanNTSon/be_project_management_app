@@ -60,47 +60,61 @@ public class User {
         this.userRoles = new HashSet<>();
     }
 
-    private void validateEmail(String email){
+    public User(String email, String username, String password) {
+        validateEmail(email);
+        validatePassword(password);
+        validateUsername(username);
+
+        this.email = email;
+        this.username = username;
+        this.password = password;
+        this.fullName = "";
+        this.isActive = true;
+        this.createdAt = LocalDateTime.now();
+        this.userRoles = new HashSet<>();
+    }
+
+    private void validateEmail(String email) {
         if (email == null || !email.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
             throw new IllegalArgumentException("Invalid email format");
         }
     }
 
-    private void validateUsername(String username){
+    private void validateUsername(String username) {
         if (username == null || username.length() < 3 || username.length() > 100) {
             throw new IllegalArgumentException("Username must be between 3 and 100 characters");
         }
     }
 
-    private void validatePassword(String password){
+    private void validatePassword(String password) {
         if (password == null || password.length() < 6) {
             throw new IllegalArgumentException("Password must be at least 6 characters long");
         }
     }
 
-    public void changeEmail(String newEmail){
+    public void changeEmail(String newEmail) {
         validateEmail(newEmail);
         this.email = newEmail;
     }
 
-    public void changePassword(String newPassword){
+    public void changePassword(String newPassword) {
         validatePassword(newPassword);
         this.password = newPassword;
     }
 
-    public void changeFullName(String newFullName){
+    public void changeFullName(String newFullName) {
         this.fullName = newFullName;
     }
 
-    public void deactivate(){
+    public void deactivate() {
         this.isActive = false;
     }
 
-    public void activate(){
+    public void activate() {
         this.isActive = true;
     }
 
-    public void assignRole(Role role){
+    public void assignRole(Role role) {
         UserRole userRole = new UserRole(this, role);
         this.userRoles.add(userRole);
     }
