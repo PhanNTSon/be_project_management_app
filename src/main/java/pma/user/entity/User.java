@@ -61,6 +61,7 @@ public class User {
         this.isActive = true;
         this.createdAt = LocalDateTime.now();
         this.userRoles = new HashSet<>();
+        this.refreshTokens = new HashSet<>();
     }
 
     public User(String email, String username, String password) {
@@ -75,6 +76,7 @@ public class User {
         this.isActive = true;
         this.createdAt = LocalDateTime.now();
         this.userRoles = new HashSet<>();
+        this.refreshTokens = new HashSet<>();
     }
 
     private void validateEmail(String email) {

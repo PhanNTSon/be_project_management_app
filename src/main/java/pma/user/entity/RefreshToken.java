@@ -66,4 +66,12 @@ public class RefreshToken {
     public boolean isExpired() {
         return expiryDate.isBefore(LocalDateTime.now());
     }
+
+    public void updateToken(String newTokenHash, LocalDateTime newExpiry) {
+        validateTokenHash(newTokenHash);
+        validateExpiry(newExpiry);
+
+        this.tokenHash = newTokenHash;
+        this.expiryDate = newExpiry;
+    }
 }

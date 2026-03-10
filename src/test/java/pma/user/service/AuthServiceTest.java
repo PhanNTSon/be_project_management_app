@@ -1,14 +1,18 @@
 package pma.user.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
@@ -20,16 +24,21 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import pma.common.exception.CustomException.EmailAlreadyExistException;
+import pma.common.exception.CustomException.ExpiredRefreshTokenException;
 import pma.common.exception.CustomException.InvalidPasswordException;
+import pma.common.exception.CustomException.InvalidRefreshTokenException;
 import pma.common.exception.CustomException.UserNotFoundException;
 import pma.common.exception.CustomException.UsernameAlreadyExistException;
 import pma.common.security.JwtService;
-import pma.user.dto.LoginResult;
+import pma.user.dto.LoginResultDto;
+import pma.user.dto.RefreshResultDto;
 import pma.user.dto.request.RequestLoginDto;
 import pma.user.dto.request.RequestRegisterDto;
 import pma.user.entity.RefreshToken;
+import pma.user.entity.Role;
 import pma.user.entity.User;
 import pma.user.repository.RefreshTokenRepo;
+import pma.user.repository.RoleRepo;
 import pma.user.repository.UserRepo;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,6 +46,8 @@ public class AuthServiceTest {
 
     @Mock
     private UserRepo userRepo;
+    @Mock
+    private RoleRepo roleRepo;
     @Mock
     private JwtService jwtService;
     @Mock
@@ -63,12 +74,14 @@ public class AuthServiceTest {
 
         RequestRegisterDto dto = new RequestRegisterDto("test@email.com", "username", "password");
 
-        when(userRepo.findByUsername(dto.getUsername()))
-                .thenReturn(Optional.of(new User()));
+        User existingUser = new User("exist@email.com", "username", "password123");
 
-        assertThrows(UsernameAlreadyExistException.class, () -> {
-            authService.registerUser(dto);
-        });
+        when(userRepo.findByUsername(dto.getUsername()))
+                .thenReturn(Optional.of(existingUser));
+
+        assertThrows(
+                UsernameAlreadyExistException.class,
+                () -> authService.registerUser(dto));
 
         verify(userRepo, never()).save(any(User.class));
     }
@@ -80,21 +93,19 @@ public class AuthServiceTest {
     @Test
     void registerUser_EmailAlreadyExists_ShouldThrowException() {
 
-        // ---------- Arrange ----------
         RequestRegisterDto dto = new RequestRegisterDto("test@email.com", "username", "password");
 
-        // username chưa tồn tại
+        User existingUser = new User("test@email.com", "anotherUser", "password123");
+
         when(userRepo.findByUsername(dto.getUsername()))
                 .thenReturn(Optional.empty());
 
-        // email đã tồn tại
         when(userRepo.findByEmail(dto.getEmail()))
-                .thenReturn(Optional.of(new User()));
+                .thenReturn(Optional.of(existingUser));
 
-        // ---------- Act & Assert ----------
-        assertThrows(EmailAlreadyExistException.class, () -> {
-            authService.registerUser(dto);
-        });
+        assertThrows(
+                EmailAlreadyExistException.class,
+                () -> authService.registerUser(dto));
 
         verify(userRepo, never()).save(any(User.class));
     }
@@ -106,8 +117,9 @@ public class AuthServiceTest {
     @Test
     void registerUser_ValidData_ShouldSaveUserSuccessfully() {
 
-        // ---------- Arrange ----------
-        RequestRegisterDto dto = new RequestRegisterDto("new@email.com", "newuser", "password");
+        RequestRegisterDto dto = new RequestRegisterDto("newuser", "passwod", "new@email.com");
+
+        Role userRole = new Role("USER", "");
 
         when(userRepo.findByUsername(dto.getUsername()))
                 .thenReturn(Optional.empty());
@@ -115,22 +127,25 @@ public class AuthServiceTest {
         when(userRepo.findByEmail(dto.getEmail()))
                 .thenReturn(Optional.empty());
 
+        when(roleRepo.findByRoleName("USER"))
+                .thenReturn(Optional.of(userRole));
+
         when(passwordEncoder.encode(dto.getPassword()))
                 .thenReturn("encodedPassword");
 
-        // ---------- Act ----------
         authService.registerUser(dto);
 
-        // ---------- Assert ----------
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
 
-        verify(userRepo, times(1)).save(userCaptor.capture());
+        verify(userRepo).save(userCaptor.capture());
 
         User savedUser = userCaptor.getValue();
 
         assertEquals("new@email.com", savedUser.getEmail());
         assertEquals("newuser", savedUser.getUsername());
         assertEquals("encodedPassword", savedUser.getPasswordHash());
+
+        assertFalse(savedUser.getUserRoles().isEmpty());
     }
 
     // ==========================================
@@ -196,7 +211,7 @@ public class AuthServiceTest {
         when(refreshTokenService.hashToken("mock_raw_refresh_token")).thenReturn("mock_hashed_refresh_token");
 
         // Act
-        LoginResult result = authService.loginUser(dto);
+        LoginResultDto result = authService.loginUser(dto);
 
         // Assert
         assertNotNull(result);
@@ -211,5 +226,126 @@ public class AuthServiceTest {
         assertEquals(mockUser, savedRt.getUser());
         assertEquals("mock_hashed_refresh_token", savedRt.getTokenHash());
         assertNotNull(savedRt.getExpiryDate());
+    }
+
+    // ==========================================
+    // CÁC TEST CASE CHO HÀM logoutUser
+    // ==========================================
+
+    @Test
+    void logoutUser_ShouldDeleteRefreshToken() {
+
+        // Arrange
+        String refreshToken = "token123";
+
+        // Act
+        authService.logoutUser(refreshToken);
+
+        // Assert
+        verify(refreshTokenRepo, times(1))
+                .deleteByTokenHash(refreshToken);
+    }
+
+    // ==========================================
+    // CÁC TEST CASE CHO HÀM refreshAccessToken
+    // ==========================================
+    @Test
+    void refreshAccessToken_TokenNotFound_ShouldThrowException() {
+
+        // Arrange
+        String refreshToken = "invalid";
+        String tokenHash = "hashedInvalid";
+
+        when(refreshTokenService.hashToken(refreshToken))
+                .thenReturn(tokenHash);
+
+        when(refreshTokenRepo.findByTokenHash(tokenHash))
+                .thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(
+                InvalidRefreshTokenException.class,
+                () -> authService.refreshAccessToken(refreshToken));
+
+        verify(refreshTokenRepo, never()).save(any());
+    }
+
+    @Test
+    void refreshAccessToken_ExpiredToken_ShouldDeleteAndThrow() {
+
+        String refreshToken = "expired";
+        String tokenHash = "hashedExpired";
+
+        User user = new User(
+                "test@email.com",
+                "testuser",
+                "password123");
+
+        RefreshToken token = spy(new RefreshToken(
+                user,
+                tokenHash,
+                LocalDateTime.now().plusDays(1)));
+
+        doReturn(true).when(token).isExpired();
+
+        when(refreshTokenService.hashToken(refreshToken))
+                .thenReturn(tokenHash);
+
+        when(refreshTokenRepo.findByTokenHash(tokenHash))
+                .thenReturn(Optional.of(token));
+
+        assertThrows(
+                ExpiredRefreshTokenException.class,
+                () -> authService.refreshAccessToken(refreshToken));
+
+        verify(refreshTokenRepo).delete(token);
+    }
+
+    @Test
+    void refreshAccessToken_ValidToken_ShouldReturnNewTokens() {
+
+        // Arrange
+        String oldRefreshToken = "oldToken";
+        String oldTokenHash = "hashedOldToken";
+
+        String newRefreshToken = "newToken";
+        String newTokenHash = "hashedNewToken";
+
+        String newAccessToken = "accessToken";
+
+        User user = new User(
+                "test@email.com",
+                "testuser",
+                "password123");
+
+        RefreshToken refreshToken = new RefreshToken(
+                user,
+                oldTokenHash,
+                LocalDateTime.now().plusDays(1));
+
+        // mock hash của old token
+        when(refreshTokenService.hashToken(oldRefreshToken))
+                .thenReturn(oldTokenHash);
+
+        when(refreshTokenRepo.findByTokenHash(oldTokenHash))
+                .thenReturn(Optional.of(refreshToken));
+
+        when(jwtService.generateToken(user.getUsername()))
+                .thenReturn(newAccessToken);
+
+        when(refreshTokenService.generateRandomToken())
+                .thenReturn(newRefreshToken);
+
+        when(refreshTokenService.hashToken(newRefreshToken))
+                .thenReturn(newTokenHash);
+
+        // Act
+        RefreshResultDto result = authService.refreshAccessToken(oldRefreshToken);
+
+        // Assert
+        assertEquals(newAccessToken, result.getNewAccessToken());
+        assertEquals(newRefreshToken, result.getNewRefreshToken());
+
+        verify(refreshTokenRepo).save(refreshToken);
     }
 }
