@@ -52,4 +52,19 @@ public class AuthController {
                 .header(HttpHeaders.SET_COOKIE, springCookie.toString()).body(response);
     }
 
+    @PostMapping("/refresh-token")
+    public ResponseEntity<ResponseRefreshTokenDto> postRefreshTokenEntity(@RequestBody String entity) {
+        //TODO: process POST request
+        
+        return entity;
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<String> postLogoutUserEntity(@RequestBody String entity) {
+        //TODO: process POST request
+        
+        return entity;
+    }
+    
+    
 }

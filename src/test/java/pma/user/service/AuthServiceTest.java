@@ -22,6 +22,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import pma.common.exception.CustomException.EmailAlreadyExistException;
 import pma.common.exception.CustomException.InvalidPasswordException;
 import pma.common.exception.CustomException.UserNotFoundException;
+import pma.common.exception.CustomException.UsernameAlreadyExistException;
 import pma.common.security.JwtService;
 import pma.user.dto.LoginResult;
 import pma.user.dto.request.RequestLoginDto;
@@ -48,25 +49,53 @@ public class AuthServiceTest {
     @InjectMocks
     private AuthService authService;
 
+    // ==========================================
+    // CÁC TEST CASE CHO HÀM registerUser
+    // ==========================================
+
+    /**
+     * Test case:
+     * Khi username đã tồn tại trong hệ thống -> phải throw
+     * UsernameAlreadyExistException
+     */
+    @Test
+    void registerUser_UsernameAlreadyExists_ShouldThrowException() {
+
+        RequestRegisterDto dto = new RequestRegisterDto("test@email.com", "username", "password");
+
+        when(userRepo.findByUsername(dto.getUsername()))
+                .thenReturn(Optional.of(new User()));
+
+        assertThrows(UsernameAlreadyExistException.class, () -> {
+            authService.registerUser(dto);
+        });
+
+        verify(userRepo, never()).save(any(User.class));
+    }
+
     /**
      * Test case:
      * Khi email đã tồn tại trong hệ thống -> phải throw EmailAlreadyExistException
      */
     @Test
     void registerUser_EmailAlreadyExists_ShouldThrowException() {
+
         // ---------- Arrange ----------
-        // Tạo dữ liệu input giả lập từ client
         RequestRegisterDto dto = new RequestRegisterDto("test@email.com", "username", "password");
 
-        // Giả lập DB trả về Optional chứa User (nghĩa là email đã tồn tại)
-        when(userRepo.findByEmail(dto.getEmail())).thenReturn(Optional.of(new User()));
+        // username chưa tồn tại
+        when(userRepo.findByUsername(dto.getUsername()))
+                .thenReturn(Optional.empty());
 
-        // Act & Assert (Thực thi và Kiểm tra ngoại lệ)
+        // email đã tồn tại
+        when(userRepo.findByEmail(dto.getEmail()))
+                .thenReturn(Optional.of(new User()));
+
+        // ---------- Act & Assert ----------
         assertThrows(EmailAlreadyExistException.class, () -> {
             authService.registerUser(dto);
         });
 
-        // Xác minh rằng hàm save() của Repo KHÔNG BAO GIỜ được gọi
         verify(userRepo, never()).save(any(User.class));
     }
 
@@ -76,23 +105,29 @@ public class AuthServiceTest {
      */
     @Test
     void registerUser_ValidData_ShouldSaveUserSuccessfully() {
-        // Arrange
-        RequestRegisterDto dto = new RequestRegisterDto("newuser", "encodedPassword", "new@email.com");
 
-        // Giả lập DB trả về rỗng (email chưa tồn tại)
-        when(userRepo.findByEmail(dto.getEmail())).thenReturn(Optional.empty());
-        // Giả lập PasswordEncoder
-        when(passwordEncoder.encode(dto.getPassword())).thenReturn("encodedPassword");
+        // ---------- Arrange ----------
+        RequestRegisterDto dto = new RequestRegisterDto("new@email.com", "newuser", "password");
 
-        // Act
+        when(userRepo.findByUsername(dto.getUsername()))
+                .thenReturn(Optional.empty());
+
+        when(userRepo.findByEmail(dto.getEmail()))
+                .thenReturn(Optional.empty());
+
+        when(passwordEncoder.encode(dto.getPassword()))
+                .thenReturn("encodedPassword");
+
+        // ---------- Act ----------
         authService.registerUser(dto);
 
-        // Assert: Bắt lấy (Capture) đối tượng User vừa được truyền vào hàm save() để
-        // kiểm tra
+        // ---------- Assert ----------
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+
         verify(userRepo, times(1)).save(userCaptor.capture());
 
         User savedUser = userCaptor.getValue();
+
         assertEquals("new@email.com", savedUser.getEmail());
         assertEquals("newuser", savedUser.getUsername());
         assertEquals("encodedPassword", savedUser.getPasswordHash());

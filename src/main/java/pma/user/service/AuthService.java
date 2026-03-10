@@ -10,6 +10,7 @@ import lombok.AllArgsConstructor;
 import pma.common.exception.CustomException.EmailAlreadyExistException;
 import pma.common.exception.CustomException.InvalidPasswordException;
 import pma.common.exception.CustomException.UserNotFoundException;
+import pma.common.exception.CustomException.UsernameAlreadyExistException;
 import pma.common.security.JwtService;
 import pma.user.dto.LoginResult;
 import pma.user.dto.request.RequestLoginDto;
@@ -31,6 +32,10 @@ public class AuthService {
 
     @Transactional
     public void registerUser(RequestRegisterDto registerDto) {
+
+        if (userRepo.findByUsername(registerDto.getUsername()).isPresent()){
+            throw new UsernameAlreadyExistException();
+        }
 
         if (userRepo.findByEmail(registerDto.getEmail()).isPresent()) {
             throw new EmailAlreadyExistException();
