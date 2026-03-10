@@ -14,8 +14,8 @@ import io.jsonwebtoken.JwtException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(value = JwtException.class)
-    public ResponseEntity<ErrorResponse> handleRuntimeException(RuntimeException ex) {
+    @ExceptionHandler(JwtException.class)
+    public ResponseEntity<ErrorResponse> handleRuntimeException(JwtException ex) {
         ErrorResponse error = new ErrorResponse(HttpStatus.UNAUTHORIZED.value(), "Token không hợp lệ hoặc đã hết hạn");
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }

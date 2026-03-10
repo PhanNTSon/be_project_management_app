@@ -73,7 +73,7 @@ public class AuthService {
         RefreshToken rt = new RefreshToken(user, refreshTokenHash, LocalDateTime.now().plusDays(7));
         refreshTokenRepo.save(rt);
 
-        return new LoginResultDto(user, accessToken, refreshTokenHash);
+        return new LoginResultDto(user, accessToken, rawToken);
     }
 
     @Transactional
