@@ -14,7 +14,6 @@ import pma.common.security.JwtService;
 import pma.user.dto.LoginResult;
 import pma.user.dto.request.RequestLoginDto;
 import pma.user.dto.request.RequestRegisterDto;
-import pma.user.dto.response.ResponseLoginDto;
 import pma.user.entity.RefreshToken;
 import pma.user.entity.User;
 import pma.user.repository.RefreshTokenRepo;
