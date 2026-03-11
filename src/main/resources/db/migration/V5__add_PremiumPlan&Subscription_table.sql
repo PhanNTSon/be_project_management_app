@@ -1,0 +1,24 @@
+CREATE TABLE PremiumPlan (
+    PlanId INT IDENTITY PRIMARY KEY,
+    PlanName NVARCHAR(100) NOT NULL,
+    Price DECIMAL(10,2) NOT NULL,
+    DurationDays INT NOT NULL,
+    Description NVARCHAR(500),
+    Status NVARCHAR(20) DEFAULT 'ACTIVE',
+    CreatedAt DATETIME2 DEFAULT SYSDATETIME()
+);
+
+
+
+CREATE TABLE Subscription (
+    SubscriptionId INT IDENTITY PRIMARY KEY,
+    UserId BIGINT NOT NULL,
+    PlanId INT NOT NULL,
+    StartDate DATETIME2 NOT NULL,
+    EndDate DATETIME2 NOT NULL,
+    Status NVARCHAR(20) DEFAULT 'ACTIVE',
+    CreatedAt DATETIME2 DEFAULT SYSDATETIME(),
+
+    FOREIGN KEY (UserId) REFERENCES [User](UserId),
+    FOREIGN KEY (PlanId) REFERENCES PremiumPlan(PlanId)
+);
