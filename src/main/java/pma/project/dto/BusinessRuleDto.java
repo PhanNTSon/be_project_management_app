@@ -1,0 +1,13 @@
+package pma.project.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class BusinessRuleDto {
+    private Integer ruleId;
+    private String ruleDescription;
+}

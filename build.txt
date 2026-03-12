@@ -1,0 +1,116 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -------------< vn.edu.fptu.swd392:project-management-app >--------------
+[INFO] Building project-management-app 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.5.0:clean (default-clean) @ project-management-app ---
+[INFO] Deleting D:\Ki_7\SWD392\Code\project-management-app\target
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ project-management-app ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 11 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ project-management-app ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 82 source files with javac [debug parameters release 21] to target\classes
+[INFO] -------------------------------------------------------------
+[ERROR] COMPILATION ERROR : 
+[INFO] -------------------------------------------------------------
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/controller/ProjectController.java:[32,30] incompatible types: java.lang.Long cannot be converted to java.lang.Integer
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/service/ProjectService.java:[40,69] cannot find symbol
+  symbol:   method getCategory()
+  location: variable v of type pma.project.entity.core.VisionScope
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/service/ProjectService.java:[40,102] cannot find symbol
+  symbol:   method getOriginalProblem()
+  location: variable v of type pma.project.entity.core.VisionScope
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/service/ProjectService.java:[52,48] cannot find symbol
+  symbol:   method getBusinessRuleId()
+  location: variable b of type pma.project.entity.usecase.BusinessRule
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/service/ProjectService.java:[52,71] cannot find symbol
+  symbol:   method getBrNo()
+  location: variable b of type pma.project.entity.usecase.BusinessRule
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/service/ProjectService.java:[52,84] cannot find symbol
+  symbol:   method getDescription()
+  location: variable b of type pma.project.entity.usecase.BusinessRule
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/service/ProjectService.java:[58,61] cannot find symbol
+  symbol:   method getCode()
+  location: variable u of type pma.project.entity.usecase.Usecase
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/service/ProjectService.java:[58,94] cannot find symbol
+  symbol:   method getDescription()
+  location: variable u of type pma.project.entity.usecase.Usecase
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/service/ProjectService.java:[58,131] cannot find symbol
+  symbol:   method getStatus()
+  location: variable u of type pma.project.entity.usecase.Usecase
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/service/ProjectService.java:[64,49] cannot find symbol
+  symbol:   method getReqId()
+  location: variable f of type pma.project.entity.core.FunctionalRequirement
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/service/ProjectService.java:[64,63] cannot find symbol
+  symbol:   method getCategory()
+  location: variable f of type pma.project.entity.core.FunctionalRequirement
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/service/ProjectService.java:[64,80] cannot find symbol
+  symbol:   method getContent()
+  location: variable f of type pma.project.entity.core.FunctionalRequirement
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/service/ProjectService.java:[70,52] cannot find symbol
+  symbol:   method getReqId()
+  location: variable n of type pma.project.entity.core.NonFunctionalRequirement
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/service/ProjectService.java:[70,83] cannot find symbol
+  symbol:   method getContent()
+  location: variable n of type pma.project.entity.core.NonFunctionalRequirement
+[INFO] 14 errors 
+[INFO] -------------------------------------------------------------
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  4.449 s
+[INFO] Finished at: 2026-03-13T00:45:30+07:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.14.1:compile (default-compile) on project project-management-app: Compilation failure: Compilation failure: 
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/controller/ProjectController.java:[32,30] incompatible types: java.lang.Long cannot be converted to java.lang.Integer
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/service/ProjectService.java:[40,69] cannot find symbol
+[ERROR]   symbol:   method getCategory()
+[ERROR]   location: variable v of type pma.project.entity.core.VisionScope
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/service/ProjectService.java:[40,102] cannot find symbol
+[ERROR]   symbol:   method getOriginalProblem()
+[ERROR]   location: variable v of type pma.project.entity.core.VisionScope
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/service/ProjectService.java:[52,48] cannot find symbol
+[ERROR]   symbol:   method getBusinessRuleId()
+[ERROR]   location: variable b of type pma.project.entity.usecase.BusinessRule
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/service/ProjectService.java:[52,71] cannot find symbol
+[ERROR]   symbol:   method getBrNo()
+[ERROR]   location: variable b of type pma.project.entity.usecase.BusinessRule
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/service/ProjectService.java:[52,84] cannot find symbol
+[ERROR]   symbol:   method getDescription()
+[ERROR]   location: variable b of type pma.project.entity.usecase.BusinessRule
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/service/ProjectService.java:[58,61] cannot find symbol
+[ERROR]   symbol:   method getCode()
+[ERROR]   location: variable u of type pma.project.entity.usecase.Usecase
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/service/ProjectService.java:[58,94] cannot find symbol
+[ERROR]   symbol:   method getDescription()
+[ERROR]   location: variable u of type pma.project.entity.usecase.Usecase
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/service/ProjectService.java:[58,131] cannot find symbol
+[ERROR]   symbol:   method getStatus()
+[ERROR]   location: variable u of type pma.project.entity.usecase.Usecase
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/service/ProjectService.java:[64,49] cannot find symbol
+[ERROR]   symbol:   method getReqId()
+[ERROR]   location: variable f of type pma.project.entity.core.FunctionalRequirement
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/service/ProjectService.java:[64,63] cannot find symbol
+[ERROR]   symbol:   method getCategory()
+[ERROR]   location: variable f of type pma.project.entity.core.FunctionalRequirement
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/service/ProjectService.java:[64,80] cannot find symbol
+[ERROR]   symbol:   method getContent()
+[ERROR]   location: variable f of type pma.project.entity.core.FunctionalRequirement
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/service/ProjectService.java:[70,52] cannot find symbol
+[ERROR]   symbol:   method getReqId()
+[ERROR]   location: variable n of type pma.project.entity.core.NonFunctionalRequirement
+[ERROR] /D:/Ki_7/SWD392/Code/project-management-app/src/main/java/pma/project/service/ProjectService.java:[70,83] cannot find symbol
+[ERROR]   symbol:   method getContent()
+[ERROR]   location: variable n of type pma.project.entity.core.NonFunctionalRequirement
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
