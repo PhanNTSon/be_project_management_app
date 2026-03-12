@@ -1,4 +1,4 @@
-package pma.project.entity;
+package pma.project.entity.usecase;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -12,6 +12,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import pma.user.entity.User;
+import pma.project.entity.core.Project;
+import pma.project.entity.core.FunctionalRequirement;
 
 @Entity
 @Table(name = "Usecase")

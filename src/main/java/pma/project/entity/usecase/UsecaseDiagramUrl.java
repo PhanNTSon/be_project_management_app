@@ -1,4 +1,4 @@
-package pma.project.entity;
+package pma.project.entity.usecase;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

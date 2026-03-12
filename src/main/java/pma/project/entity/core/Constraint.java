@@ -1,4 +1,4 @@
-package pma.project.entity;
+package pma.project.entity.core;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -12,21 +12,21 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "Actor")
+@Table(name = "[Constraint]")
 @Getter
 @NoArgsConstructor
-public class Actor {
+public class Constraint {
     @Id
-    @Column(name = "ActorId")
+    @Column(name = "ConstraintId")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer actorId;
+    private Integer constraintId;
 
     @ManyToOne
     @JoinColumn(name = "ProjectId", nullable = false)
     private Project project;
 
-    @Column(name = "ActorName", nullable = false, length = 255)
-    private String actorName;
+    @Column(name = "[Type]", nullable = false, length = 100)
+    private String type;
 
     @Column(name = "Description", columnDefinition = "NVARCHAR(MAX)")
     private String description;
@@ -38,14 +38,14 @@ public class Actor {
         this.project = project;
     }
 
-    public void setActorName(String actorName) {
-        if (actorName == null || actorName.trim().isEmpty()) {
-            throw new IllegalArgumentException("ActorName cannot be null or empty");
+    public void setType(String type) {
+        if (type == null || type.trim().isEmpty()) {
+            throw new IllegalArgumentException("Type cannot be null or empty");
         }
-        if (actorName.length() > 255) {
-            throw new IllegalArgumentException("ActorName cannot exceed 255 characters");
+        if (type.length() > 100) {
+            throw new IllegalArgumentException("Type cannot exceed 100 characters");
         }
-        this.actorName = actorName;
+        this.type = type;
     }
 
     public void setDescription(String description) {

@@ -1,4 +1,4 @@
-package pma.project.entity;
+package pma.project.entity.usecase;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,6 +10,8 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import pma.project.entity.core.Project;
 
 @Entity
 @Table(name = "BusinessRule")

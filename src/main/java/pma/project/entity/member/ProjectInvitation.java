@@ -1,9 +1,10 @@
-package pma.project.entity;
+package pma.project.entity.member;
 
 import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import pma.project.entity.core.Project;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;

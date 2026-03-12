@@ -1,4 +1,4 @@
-package pma.project.entity;
+package pma.project.entity.usecase;
 
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
@@ -10,12 +10,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "UsecaseActor")
+@Table(name = "UsecaseBusinessRule")
 @Getter
 @NoArgsConstructor
-public class UsecaseActor {
+public class UsecaseBusinessRule {
     @EmbeddedId
-    private UsecaseActorId id;
+    private UsecaseBusinessRuleId id;
 
     @ManyToOne
     @MapsId("usecaseId")
@@ -23,17 +23,17 @@ public class UsecaseActor {
     private Usecase usecase;
 
     @ManyToOne
-    @MapsId("actorId")
-    @JoinColumn(name = "ActorId", nullable = false)
-    private Actor actor;
+    @MapsId("ruleId")
+    @JoinColumn(name = "RuleId", nullable = false)
+    private BusinessRule businessRule;
 
-    public UsecaseActor(Usecase usecase, Actor actor) {
+    public UsecaseBusinessRule(Usecase usecase, BusinessRule rule) {
         setUsecase(usecase);
-        setActor(actor);
-        this.id = new UsecaseActorId(usecase.getUsecaseId(), actor.getActorId());
+        setBusinessRule(rule);
+        this.id = new UsecaseBusinessRuleId(usecase.getUsecaseId(), rule.getRuleId());
     }
 
-    public void setId(UsecaseActorId id) {
+    public void setId(UsecaseBusinessRuleId id) {
         this.id = id;
     }
 
@@ -44,10 +44,10 @@ public class UsecaseActor {
         this.usecase = usecase;
     }
 
-    public void setActor(Actor actor) {
-        if (actor == null) {
-            throw new IllegalArgumentException("Actor cannot be null");
+    public void setBusinessRule(BusinessRule businessRule) {
+        if (businessRule == null) {
+            throw new IllegalArgumentException("BusinessRule cannot be null");
         }
-        this.actor = actor;
+        this.businessRule = businessRule;
     }
 }

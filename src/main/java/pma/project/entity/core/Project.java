@@ -1,6 +1,7 @@
-package pma.project.entity;
+package pma.project.entity.core;
 
 import java.time.LocalDateTime;
+import pma.project.entity.member.ProjectMember;
 import java.util.HashSet;
 import java.util.Set;
 

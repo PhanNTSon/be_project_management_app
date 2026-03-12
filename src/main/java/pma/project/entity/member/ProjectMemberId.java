@@ -1,4 +1,4 @@
-package pma.project.entity;
+package pma.project.entity.member;
 
 import java.io.Serializable;
 

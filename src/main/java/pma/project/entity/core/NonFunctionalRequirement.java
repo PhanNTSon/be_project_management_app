@@ -1,4 +1,4 @@
-package pma.project.entity;
+package pma.project.entity.core;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -12,10 +12,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "FunctionalRequirement")
+@Table(name = "NonFunctionalRequirement")
 @Getter
 @NoArgsConstructor
-public class FunctionalRequirement {
+public class NonFunctionalRequirement {
     @Id
     @Column(name = "RequirementId")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,8 +25,8 @@ public class FunctionalRequirement {
     @JoinColumn(name = "ProjectId", nullable = false)
     private Project project;
 
-    @Column(name = "Title", nullable = false, length = 255)
-    private String title;
+    @Column(name = "Category", nullable = false, length = 50)
+    private String category;
 
     @Column(name = "Description", columnDefinition = "NVARCHAR(MAX)")
     private String description;
@@ -38,14 +38,15 @@ public class FunctionalRequirement {
         this.project = project;
     }
 
-    public void setTitle(String title) {
-        if (title == null || title.trim().isEmpty()) {
-            throw new IllegalArgumentException("Title cannot be null or empty");
+    public void setCategory(String category) {
+        if (category == null || category.trim().isEmpty()) {
+            throw new IllegalArgumentException("Category cannot be null or empty");
         }
-        if (title.length() > 255) {
-            throw new IllegalArgumentException("Title cannot exceed 255 characters");
+        if (!category.equals("USABILITY") && !category.equals("PERFORMANCE") && 
+            !category.equals("SECURITY") && !category.equals("SCALABILITY")) {
+            throw new IllegalArgumentException("Category must be USABILITY, PERFORMANCE, SECURITY, or SCALABILITY");
         }
-        this.title = title;
+        this.category = category;
     }
 
     public void setDescription(String description) {

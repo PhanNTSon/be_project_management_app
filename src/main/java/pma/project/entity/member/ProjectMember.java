@@ -1,4 +1,4 @@
-package pma.project.entity;
+package pma.project.entity.member;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
@@ -11,6 +11,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import pma.user.entity.User;
+import pma.project.entity.core.Project;
 
 @Entity
 @Table(name = "ProjectMember")
@@ -30,13 +31,14 @@ public class ProjectMember {
     @JoinColumn(name = "UserId", nullable = false)
     private User user;
 
-    @Column(name = "Role", nullable = false, length = 100)
-    private String role;
+    @ManyToOne
+    @JoinColumn(name = "ProjectRoleId", nullable = false)
+    private ProjectRole projectRole;
 
-    public ProjectMember(Project project, User user, String role) {
+    public ProjectMember(Project project, User user, ProjectRole projectRole) {
         setProject(project);
         setUser(user);
-        setRole(role);
+        setProjectRole(projectRole);
         this.id = new ProjectMemberId(project.getProjectId(), user.getUserId());
     }
 
@@ -58,13 +60,10 @@ public class ProjectMember {
         this.user = user;
     }
 
-    public void setRole(String role) {
-        if (role == null || role.trim().isEmpty()) {
-            throw new IllegalArgumentException("Role cannot be null or empty");
+    public void setProjectRole(ProjectRole projectRole) {
+        if (projectRole == null) {
+            throw new IllegalArgumentException("ProjectRole cannot be null");
         }
-        if (role.length() > 100) {
-            throw new IllegalArgumentException("Role cannot exceed 100 characters");
-        }
-        this.role = role;
+        this.projectRole = projectRole;
     }
 }
