@@ -8,4 +8,8 @@ public class UserNotFoundException extends ApiException {
     public UserNotFoundException() {
         super(HttpStatus.BAD_REQUEST, "Không tìm thấy người dùng");
     }
+
+    public UserNotFoundException(String message) {
+        super(HttpStatus.BAD_REQUEST, message);
+    }
 }
