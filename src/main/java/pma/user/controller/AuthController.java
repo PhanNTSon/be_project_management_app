@@ -84,7 +84,7 @@ public class AuthController {
                                 .httpOnly(true)
                                 .secure(false)
                                 .sameSite("Lax")
-                                .path("/api/auth/refresh-token")
+                                .path("/api/auth") // ✅ phải khớp với path khi set cookie lúc login
                                 .maxAge(0)
                                 .build();
 
