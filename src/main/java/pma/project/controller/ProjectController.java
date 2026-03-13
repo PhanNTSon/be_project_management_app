@@ -2,15 +2,15 @@ package pma.project.controller;
 
 import java.util.List;
 
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import lombok.RequiredArgsConstructor;
+import pma.project.dto.request.RequestCreateProjectDto;
 import pma.project.dto.response.*;
 import pma.project.service.ProjectService;
 
@@ -32,11 +32,36 @@ public class ProjectController {
         return user.getUserId();
     }
 
+    // =====================================================================
+    // PROJECT CRUD
+    // =====================================================================
+
     @GetMapping
     public ResponseEntity<List<ResponseProjectListDto>> getMyProjects(@AuthenticationPrincipal UserDetails userDetails) {
         Long userId = getCurrentUserId(userDetails);
         return ResponseEntity.ok(projectService.getProjectsByUserId(userId));
     }
+
+    @PostMapping
+    public ResponseEntity<ResponseProjectListDto> createProject(
+            @Valid @RequestBody RequestCreateProjectDto dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = getCurrentUserId(userDetails);
+        return ResponseEntity.status(HttpStatus.CREATED).body(projectService.createProject(userId, dto));
+    }
+
+    @DeleteMapping("/{projectId}")
+    public ResponseEntity<Void> deleteProject(
+            @PathVariable Integer projectId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = getCurrentUserId(userDetails);
+        projectService.deleteProject(userId, projectId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // =====================================================================
+    // PROJECT DATA QUERIES
+    // =====================================================================
 
     @GetMapping("/{projectId}/context-diagram")
     public ResponseEntity<String> getContextDiagramUrl(@PathVariable Integer projectId) {
@@ -74,10 +99,10 @@ public class ProjectController {
     }
 
     @GetMapping("/{projectId}/permissions")
-    public ResponseEntity<List<ResponsePermissionDto>> getPermissions(@PathVariable Integer projectId, @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<List<ResponsePermissionDto>> getPermissions(
+            @PathVariable Integer projectId,
+            @AuthenticationPrincipal UserDetails userDetails) {
         Long userId = getCurrentUserId(userDetails);
         return ResponseEntity.ok(projectService.getPermissions(projectId, userId));
     }
 }
-
-

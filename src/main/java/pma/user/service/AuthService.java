@@ -13,6 +13,7 @@ import pma.common.exception.CustomException.InvalidPasswordException;
 import pma.common.exception.CustomException.InvalidRefreshTokenException;
 import pma.common.exception.CustomException.UserNotFoundException;
 import pma.common.exception.CustomException.UsernameAlreadyExistException;
+import pma.common.exception.CustomException.RoleNotFoundException;
 import pma.common.security.JwtService;
 import pma.user.dto.LoginResultDto;
 import pma.user.dto.RefreshResultDto;
@@ -55,7 +56,7 @@ public class AuthService {
         }
 
         // Lấy Role mặc định là USER từ DB
-        Role userRole = roleRepo.findByRoleName("USER").orElseThrow(() -> new RuntimeException());
+        Role userRole = roleRepo.findByRoleName("USER").orElseThrow(() -> new RoleNotFoundException("USER"));
         
         // Khởi tạo đối tượng User mới và mã hóa mật khẩu
         User newUser = new User(registerDto.getEmail(),

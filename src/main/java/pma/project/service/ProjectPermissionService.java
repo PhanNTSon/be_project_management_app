@@ -40,6 +40,16 @@ public class ProjectPermissionService {
     public boolean hasRole(Long userId, Integer projectId, String roleName) {
         return projectMemberRepository.findById(new ProjectMemberId(projectId, userId))
                 .map(m -> m.getProjectRole().getName().equalsIgnoreCase(roleName))
-                .orElse(false); // Nếu không thuộc project, trả về false luôn.
+                .orElse(false);
+    }
+
+    /**
+     * Kiểm tra nhanh xem User có Permission cụ thể không, KHÔNG ném exception (dùng cho logic phân nhánh).
+     */
+    public boolean hasPermission(Long userId, Integer projectId, String permissionCode) {
+        return projectMemberRepository.findById(new ProjectMemberId(projectId, userId))
+                .map(m -> m.getProjectRole().getPermissions().stream()
+                        .anyMatch(p -> p.getCode().equals(permissionCode)))
+                .orElse(false);
     }
 }
