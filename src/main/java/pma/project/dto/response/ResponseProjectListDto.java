@@ -1,4 +1,4 @@
-package pma.project.dto;
+package pma.project.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -7,8 +7,8 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class NonFunctionalReqDto {
-    private Integer requirementId;
-    private String category;
+public class ResponseProjectListDto {
+    private Integer projectId;
+    private String projectName;
     private String description;
 }

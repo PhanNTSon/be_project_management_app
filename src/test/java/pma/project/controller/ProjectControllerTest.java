@@ -1,7 +1,5 @@
 package pma.project.controller;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -20,14 +18,12 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import pma.project.dto.ProjectListDto;
-import pma.project.dto.VisionScopeDto;
+import pma.project.dto.response.ResponsePermissionDto;
+import pma.project.dto.response.ResponseProjectListDto;
+import pma.project.dto.response.ResponseVisionScopeDto;
 import pma.project.service.ProjectService;
 import pma.user.entity.User;
 import pma.user.repository.UserRepo;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.mockito.Mockito;
 
 import org.springframework.core.MethodParameter;
@@ -78,7 +74,7 @@ public class ProjectControllerTest {
 
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(spyUser));
 
-        ProjectListDto dto = new ProjectListDto(1, "Test Project", "Desc");
+        ResponseProjectListDto dto = new ResponseProjectListDto(1, "Test Project", "Desc");
         when(projectService.getProjectsByUserId(1L)).thenReturn(Arrays.asList(dto));
 
         mockMvc.perform(get("/api/projects"))
@@ -98,11 +94,28 @@ public class ProjectControllerTest {
 
     @Test
     void getVisionScopes_ShouldReturnList() throws Exception {
-        VisionScopeDto dto = new VisionScopeDto(1, "Scope");
+        ResponseVisionScopeDto dto = new ResponseVisionScopeDto(1, "Scope");
         when(projectService.getVisionScopes(1)).thenReturn(Arrays.asList(dto));
 
         mockMvc.perform(get("/api/projects/1/vision-scopes"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].content").value("Scope"));
+    }
+
+    @Test
+    void getPermissions_ShouldReturnList() throws Exception {
+        User mockUser = new User();
+        User spyUser = Mockito.spy(mockUser);
+        when(spyUser.getUserId()).thenReturn(1L);
+
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(spyUser));
+
+        ResponsePermissionDto dto = new ResponsePermissionDto("CODE_1", "Desc");
+        when(projectService.getPermissions(1, 1L)).thenReturn(Arrays.asList(dto));
+
+        mockMvc.perform(get("/api/projects/1/permissions"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].code").value("CODE_1"))
+                .andExpect(jsonPath("$[0].description").value("Desc"));
     }
 }

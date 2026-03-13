@@ -16,8 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import pma.common.exception.CustomException.ProjectNotFoundException;
-import pma.project.dto.ProjectListDto;
-import pma.project.dto.*;
+import pma.project.dto.response.*;
 import pma.project.entity.core.*;
 import pma.project.entity.usecase.*;
 import pma.project.repository.*;
@@ -39,6 +38,8 @@ public class ProjectServiceTest {
     private FunctionalRequirementRepository functionalRequirementRepository;
     @Mock
     private NonFunctionalRequirementRepository nonFunctionalRequirementRepository;
+    @Mock
+    private ProjectMemberRepository projectMemberRepository;
 
     @InjectMocks
     private ProjectService projectService;
@@ -56,7 +57,7 @@ public class ProjectServiceTest {
 
         when(projectRepository.findProjectsByUserId(userId)).thenReturn(Arrays.asList(p1, p2));
 
-        List<ProjectListDto> result = projectService.getProjectsByUserId(userId);
+        List<ResponseProjectListDto> result = projectService.getProjectsByUserId(userId);
 
         assertNotNull(result);
         assertEquals(2, result.size());
@@ -94,7 +95,7 @@ public class ProjectServiceTest {
         
         when(visionScopeRepository.findByProject_ProjectId(projectId)).thenReturn(Arrays.asList(v));
 
-        List<VisionScopeDto> result = projectService.getVisionScopes(projectId);
+        List<ResponseVisionScopeDto> result = projectService.getVisionScopes(projectId);
 
         assertEquals(1, result.size());
         assertEquals("Scope Content", result.get(0).getContent());
@@ -108,7 +109,7 @@ public class ProjectServiceTest {
         
         when(constraintRepository.findByProject_ProjectId(projectId)).thenReturn(Arrays.asList(c));
 
-        List<ConstraintDto> result = projectService.getConstraints(projectId);
+        List<ResponseConstraintDto> result = projectService.getConstraints(projectId);
 
         assertEquals(1, result.size());
         assertEquals("Constraint Desc", result.get(0).getDescription());
@@ -122,7 +123,7 @@ public class ProjectServiceTest {
         
         when(businessRuleRepository.findByProject_ProjectId(projectId)).thenReturn(Arrays.asList(b));
 
-        List<BusinessRuleDto> result = projectService.getBusinessRules(projectId);
+        List<ResponseBusinessRuleDto> result = projectService.getBusinessRules(projectId);
 
         assertEquals(1, result.size());
         assertEquals("BR Desc", result.get(0).getRuleDescription());
@@ -137,7 +138,7 @@ public class ProjectServiceTest {
         
         when(usecaseRepository.findByProject_ProjectId(projectId)).thenReturn(Arrays.asList(u));
 
-        List<UsecaseDto> result = projectService.getUsecases(projectId);
+        List<ResponseUsecaseDto> result = projectService.getUsecases(projectId);
 
         assertEquals(1, result.size());
         assertEquals("UC Name", result.get(0).getUsecaseName());
@@ -153,7 +154,7 @@ public class ProjectServiceTest {
         
         when(functionalRequirementRepository.findByProject_ProjectId(projectId)).thenReturn(Arrays.asList(f));
 
-        List<FunctionalReqDto> result = projectService.getFunctionalRequirements(projectId);
+        List<ResponseFunctionalReqDto> result = projectService.getFunctionalRequirements(projectId);
 
         assertEquals(1, result.size());
         assertEquals("FR Title", result.get(0).getTitle());
@@ -169,10 +170,40 @@ public class ProjectServiceTest {
         
         when(nonFunctionalRequirementRepository.findByProject_ProjectId(projectId)).thenReturn(Arrays.asList(n));
 
-        List<NonFunctionalReqDto> result = projectService.getNonFunctionalRequirements(projectId);
+        List<ResponseNonFunctionalReqDto> result = projectService.getNonFunctionalRequirements(projectId);
 
         assertEquals(1, result.size());
         assertEquals("PERFORMANCE", result.get(0).getCategory());
         assertEquals("NFR Desc", result.get(0).getDescription());
     }
+
+    @Test
+    void getPermissions_ShouldReturnDtoList() {
+        Integer projectId = 1;
+        Long userId = 1L;
+        pma.project.entity.member.ProjectMember member = new pma.project.entity.member.ProjectMember();
+        pma.project.entity.member.ProjectRole role = new pma.project.entity.member.ProjectRole("Role", "Desc");
+        pma.project.entity.member.Permission permission = new pma.project.entity.member.Permission("CODE", "Desc");
+        role.addPermission(permission);
+        member.setProjectRole(role);
+        
+        when(projectMemberRepository.findById(new pma.project.entity.member.ProjectMemberId(projectId, userId))).thenReturn(Optional.of(member));
+
+        List<ResponsePermissionDto> result = projectService.getPermissions(projectId, userId);
+
+        assertEquals(1, result.size());
+        assertEquals("CODE", result.get(0).getCode());
+        assertEquals("Desc", result.get(0).getDescription());
+    }
+
+    @Test
+    void getPermissions_ProjectMemberNotFound_ShouldThrowException() {
+        Integer projectId = 99;
+        Long userId = 1L;
+        
+        when(projectMemberRepository.findById(new pma.project.entity.member.ProjectMemberId(projectId, userId))).thenReturn(Optional.empty());
+
+        assertThrows(ProjectNotFoundException.class, () -> projectService.getPermissions(projectId, userId));
+    }
 }
+

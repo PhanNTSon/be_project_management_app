@@ -1,4 +1,4 @@
-package pma.project.dto;
+package pma.project.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -7,7 +7,8 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ConstraintDto {
-    private Integer constraintId;
+public class ResponseNonFunctionalReqDto {
+    private Integer requirementId;
+    private String category;
     private String description;
 }

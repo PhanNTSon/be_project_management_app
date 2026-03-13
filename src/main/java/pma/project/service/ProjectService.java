@@ -8,9 +8,8 @@ import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 import pma.common.exception.CustomException.ProjectNotFoundException;
 
-import pma.project.dto.*;
+import pma.project.dto.response.*;
 import pma.project.entity.core.*;
-import pma.project.entity.usecase.*;
 import pma.project.repository.*;
 
 @Service
@@ -24,10 +23,11 @@ public class ProjectService {
     private final UsecaseRepository usecaseRepository;
     private final FunctionalRequirementRepository functionalRequirementRepository;
     private final NonFunctionalRequirementRepository nonFunctionalRequirementRepository;
+    private final ProjectMemberRepository projectMemberRepository;
 
-    public List<ProjectListDto> getProjectsByUserId(Long userId) {
+    public List<ResponseProjectListDto> getProjectsByUserId(Long userId) {
         return projectRepository.findProjectsByUserId(userId).stream()
-                .map(p -> new ProjectListDto(p.getProjectId(), p.getProjectName(), p.getDescription()))
+                .map(p -> new ResponseProjectListDto(p.getProjectId(), p.getProjectName(), p.getDescription()))
                 .collect(Collectors.toList());
     }
 
@@ -37,39 +37,49 @@ public class ProjectService {
         return project.getContextDiagramUrl();
     }
 
-    public List<VisionScopeDto> getVisionScopes(Integer projectId) {
+    public List<ResponseVisionScopeDto> getVisionScopes(Integer projectId) {
         return visionScopeRepository.findByProject_ProjectId(projectId).stream()
-                .map(v -> new VisionScopeDto(v.getVisionScopeId(), v.getContent()))
+                .map(v -> new ResponseVisionScopeDto(v.getVisionScopeId(), v.getContent()))
                 .collect(Collectors.toList());
     }
 
-    public List<ConstraintDto> getConstraints(Integer projectId) {
+    public List<ResponseConstraintDto> getConstraints(Integer projectId) {
         return constraintRepository.findByProject_ProjectId(projectId).stream()
-                .map(c -> new ConstraintDto(c.getConstraintId(), c.getDescription()))
+                .map(c -> new ResponseConstraintDto(c.getConstraintId(), c.getDescription()))
                 .collect(Collectors.toList());
     }
 
-    public List<BusinessRuleDto> getBusinessRules(Integer projectId) {
+    public List<ResponseBusinessRuleDto> getBusinessRules(Integer projectId) {
         return businessRuleRepository.findByProject_ProjectId(projectId).stream()
-                .map(b -> new BusinessRuleDto(b.getRuleId(), b.getRuleDescription()))
+                .map(b -> new ResponseBusinessRuleDto(b.getRuleId(), b.getRuleDescription()))
                 .collect(Collectors.toList());
     }
 
-    public List<UsecaseDto> getUsecases(Integer projectId) {
+    public List<ResponseUsecaseDto> getUsecases(Integer projectId) {
         return usecaseRepository.findByProject_ProjectId(projectId).stream()
-                .map(u -> new UsecaseDto(u.getUsecaseId(), u.getUsecaseName(), u.getPrecondition(), u.getPostcondition(), u.getExceptions(), u.getPriority()))
+                .map(u -> new ResponseUsecaseDto(u.getUsecaseId(), u.getUsecaseName(), u.getPrecondition(), u.getPostcondition(), u.getExceptions(), u.getPriority()))
                 .collect(Collectors.toList());
     }
 
-    public List<FunctionalReqDto> getFunctionalRequirements(Integer projectId) {
+    public List<ResponseFunctionalReqDto> getFunctionalRequirements(Integer projectId) {
         return functionalRequirementRepository.findByProject_ProjectId(projectId).stream()
-                .map(f -> new FunctionalReqDto(f.getRequirementId(), f.getTitle(), f.getDescription()))
+                .map(f -> new ResponseFunctionalReqDto(f.getRequirementId(), f.getTitle(), f.getDescription()))
                 .collect(Collectors.toList());
     }
 
-    public List<NonFunctionalReqDto> getNonFunctionalRequirements(Integer projectId) {
+    public List<ResponseNonFunctionalReqDto> getNonFunctionalRequirements(Integer projectId) {
         return nonFunctionalRequirementRepository.findByProject_ProjectId(projectId).stream()
-                .map(n -> new NonFunctionalReqDto(n.getRequirementId(), n.getCategory(), n.getDescription()))
+                .map(n -> new ResponseNonFunctionalReqDto(n.getRequirementId(), n.getCategory(), n.getDescription()))
+                .collect(Collectors.toList());
+    }
+
+    public List<ResponsePermissionDto> getPermissions(Integer projectId, Long userId) {
+        pma.project.entity.member.ProjectMember member = projectMemberRepository.findById(new pma.project.entity.member.ProjectMemberId(projectId, userId))
+                .orElseThrow(() -> new ProjectNotFoundException());
+        return member.getProjectRole().getPermissions().stream()
+                .map(p -> new ResponsePermissionDto(p.getCode(), p.getDescription()))
                 .collect(Collectors.toList());
     }
 }
+
+

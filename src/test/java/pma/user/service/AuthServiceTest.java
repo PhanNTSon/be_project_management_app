@@ -216,7 +216,7 @@ public class AuthServiceTest {
         // Assert
         assertNotNull(result);
         assertEquals("mock_access_token", result.getAccessToken()); // Điều chỉnh getter theo thiết kế LoginResult
-        assertEquals("mock_hashed_refresh_token", result.getRefreshToken());
+        assertEquals("mock_raw_refresh_token", result.getRefreshToken());
 
         // Xác minh RefreshToken đã được tạo và lưu xuống DB thành công
         ArgumentCaptor<RefreshToken> rtCaptor = ArgumentCaptor.forClass(RefreshToken.class);
