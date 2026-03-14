@@ -10,10 +10,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class ResponseLoginDto {
-    
-    private String username;
-    private String fullName;
-    private String email;
+
     private String accessToken;
     private String tokenType = "Bearer";
 }

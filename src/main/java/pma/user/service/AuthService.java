@@ -22,9 +22,11 @@ import pma.user.dto.request.RequestRegisterDto;
 import pma.user.entity.RefreshToken;
 import pma.user.entity.Role;
 import pma.user.entity.User;
+import pma.user.entity.UserRole;
 import pma.user.repository.RefreshTokenRepo;
 import pma.user.repository.RoleRepo;
 import pma.user.repository.UserRepo;
+import pma.user.repository.UserRoleRepo;
 
 @Service
 @AllArgsConstructor
@@ -36,11 +38,13 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
     private final RefreshTokenRepo refreshTokenRepo;
+    private final UserRoleRepo userRoleRepo;
 
     /**
      * Xử lý logic đăng ký người dùng mới.
      * Lần lượt kiểm tra xem username hoặc email đã tồn tại trong hệ thống chưa.
-     * Nếu chưa, tạo một thực thể User mới, mã hóa mật khẩu, gán quyền mặc định là USER và lưu vào database.
+     * Nếu chưa, tạo một thực thể User mới, mã hóa mật khẩu, gán quyền mặc định là
+     * USER và lưu vào database.
      */
     @Transactional
     public void registerUser(RequestRegisterDto registerDto) {
@@ -57,23 +61,26 @@ public class AuthService {
 
         // Lấy Role mặc định là USER từ DB
         Role userRole = roleRepo.findByRoleName("USER").orElseThrow(() -> new RoleNotFoundException("USER"));
-        
+
         // Khởi tạo đối tượng User mới và mã hóa mật khẩu
         User newUser = new User(registerDto.getEmail(),
                 registerDto.getUsername(),
                 passwordEncoder.encode(registerDto.getPassword()));
 
-        // Gán Role mặc định cho User vừa tạo
-        newUser.assignRole(userRole);
-
-        // Lưu thông tin người dùng mới vào hệ thống
+        // Lưu thông tin người dùng mới vào hệ thống trước (để generate userId)
         userRepo.save(newUser);
+
+        // Tạo và lưu UserRole sau khi User đã được persist (có userId)
+        UserRole newUserRole = new UserRole(newUser, userRole);
+        userRoleRepo.save(newUserRole);
     }
 
     /**
      * Xử lý đăng nhập của người dùng.
-     * Kiểm tra username và so sánh mật khẩu. Nếu thông tin đúng, sẽ tạo ra Access Token (JWT)
-     * và Refresh Token chữ ký ngẫu nhiên (raw token), lưu Refresh Token dạng hash vào CSDL,
+     * Kiểm tra username và so sánh mật khẩu. Nếu thông tin đúng, sẽ tạo ra Access
+     * Token (JWT)
+     * và Refresh Token chữ ký ngẫu nhiên (raw token), lưu Refresh Token dạng hash
+     * vào CSDL,
      * rồi trả về DTO chứa thông tin user cùng các token.
      */
     @Transactional
@@ -89,10 +96,10 @@ public class AuthService {
 
         // Chế tạo Access Token (JWT) mang thông tin username
         String accessToken = jwtService.generateToken(user.getUsername());
-        
+
         // Chế tạo chuỗi Refresh Token ngẫu nhiên để gửi về client
         String rawToken = refreshTokenService.generateRandomToken();
-        
+
         // Băm Refresh Token để lưu database, tăng độ bảo mật nếu DB bị rò rỉ
         String refreshTokenHash = refreshTokenService.hashToken(rawToken);
 
@@ -100,7 +107,8 @@ public class AuthService {
         RefreshToken rt = new RefreshToken(user, refreshTokenHash, LocalDateTime.now().plusDays(7));
         refreshTokenRepo.save(rt);
 
-        // Trả về kết quả hiển thị cho client (bao gồm thông tin user cơ bản và token raw)
+        // Trả về kết quả hiển thị cho client (bao gồm thông tin user cơ bản và token
+        // raw)
         return new LoginResultDto(user, accessToken, rawToken);
     }
 
@@ -115,9 +123,8 @@ public class AuthService {
     }
 
     /**
-     * Cấp phát lại Access Token và Refresh Token mới bằng Refresh Token cũ hợp lệ (Refresh Token Rotation).
-     * Băm token plain text từ client, đối chiếu DB, nếu hợp lệ và chưa hết hạn thì tiến hành 
-     * tạo và thay thế bằng cặp token hoàn toàn mới.
+     * Cấp phát lại Access Token từ Refresh Token cũ (không thay đổi Refresh Token).
+     * Chỉ sinh Access Token mới, Refresh Token vẫn giữ nguyên.
      */
     @Transactional
     public RefreshResultDto refreshAccessToken(String refreshToken) {
@@ -135,19 +142,11 @@ public class AuthService {
             throw new ExpiredRefreshTokenException();
         }
 
-        // Tạo lại Access Token mới
+        // Tạo lại Access Token mới (Refresh Token không đổi)
         String newAccessToken = jwtService.generateToken(rt.getUser().getUsername());
-        
-        // Xoay vòng Refresh Token: tạo ngẫu nhiên một raw token mới và đoạn băm của nó
-        String newRefreshTokenRaw = refreshTokenService.generateRandomToken();
-        String newRefreshTokenHash = refreshTokenService.hashToken(newRefreshTokenRaw);
 
-        // Cập nhật Refresh Token mới đè lên cái cũ (tiếp tục cho chu kì 7 ngày nữa)
-        rt.updateToken(newRefreshTokenHash, LocalDateTime.now().plusDays(7));
-        refreshTokenRepo.save(rt);
-
-        // Gửi chuỗi cặp Token mới vừa tạo trả về phía client
-        return new RefreshResultDto(newAccessToken, newRefreshTokenRaw);
+        // Gửi Access Token mới trả về phía client (Refresh Token vẫn giữ nguyên)
+        return new RefreshResultDto(newAccessToken);
     }
 
 }

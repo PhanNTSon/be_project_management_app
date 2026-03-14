@@ -7,6 +7,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import pma.user.entity.User;
 import pma.user.repository.UserRepo;
@@ -24,10 +25,13 @@ public class CustomUserDetailService implements UserDetailsService {
     }
 
     /**
-     * Hàm bắt buộc phải implement từ UserDetailsService. 
+     * Hàm bắt buộc phải implement từ UserDetailsService.
      * Nó được Spring Security gọi ẩn phía dưới khi cần xác thực hoặc lấy quyền.
+     *
+     * @Transactional để giữ session mở, cho phép lazy-load UserRoles từ User entity.
      */
     @Override
+    @Transactional
     public UserDetails loadUserByUsername(String username) {
 
         // Bước 1: Tìm dưới Database bằng username từ entity User của project
@@ -36,6 +40,7 @@ public class CustomUserDetailService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         // Bước 2: Chuyển đổi danh sách role của entity sang danh sách SimpleGrantedAuthority của Spring
+        // @Transactional ensures UserRoles are loaded (LAZY loading)
         List<SimpleGrantedAuthority> authorities = user.getUserRoles().stream()
                 .map(ur -> new SimpleGrantedAuthority(ur.getRole().getRoleName()))
                 .toList();

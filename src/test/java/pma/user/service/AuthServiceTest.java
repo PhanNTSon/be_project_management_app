@@ -1,7 +1,6 @@
 package pma.user.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -37,9 +36,11 @@ import pma.user.dto.request.RequestRegisterDto;
 import pma.user.entity.RefreshToken;
 import pma.user.entity.Role;
 import pma.user.entity.User;
+import pma.user.entity.UserRole;
 import pma.user.repository.RefreshTokenRepo;
 import pma.user.repository.RoleRepo;
 import pma.user.repository.UserRepo;
+import pma.user.repository.UserRoleRepo;
 
 @ExtendWith(MockitoExtension.class)
 public class AuthServiceTest {
@@ -56,6 +57,8 @@ public class AuthServiceTest {
     private RefreshTokenService refreshTokenService;
     @Mock
     private RefreshTokenRepo refreshTokenRepo;
+    @Mock
+    private UserRoleRepo userRoleRepo;
 
     @InjectMocks
     private AuthService authService;
@@ -112,7 +115,7 @@ public class AuthServiceTest {
 
     /**
      * Test case:
-     * Khi dữ liệu hợp lệ -> user phải được tạo và lưu xuống DB
+     * Khi dữ liệu hợp lệ -> user phải được tạo và lưu xuống DB, UserRole phải được lưu
      */
     @Test
     void registerUser_ValidData_ShouldSaveUserSuccessfully() {
@@ -145,7 +148,12 @@ public class AuthServiceTest {
         assertEquals("newuser", savedUser.getUsername());
         assertEquals("encodedPassword", savedUser.getPasswordHash());
 
-        assertFalse(savedUser.getUserRoles().isEmpty());
+        // Verify that UserRole was saved with the user and role
+        ArgumentCaptor<UserRole> userRoleCaptor = ArgumentCaptor.forClass(UserRole.class);
+        verify(userRoleRepo, times(1)).save(userRoleCaptor.capture());
+
+        UserRole savedUserRole = userRoleCaptor.getValue();
+        assertEquals(userRole, savedUserRole.getRole());
     }
 
     // ==========================================
@@ -302,50 +310,47 @@ public class AuthServiceTest {
     }
 
     @Test
-    void refreshAccessToken_ValidToken_ShouldReturnNewTokens() {
+    void refreshAccessToken_ValidToken_ShouldReturnNewAccessTokenOnly() {
 
         // Arrange
-        String oldRefreshToken = "oldToken";
-        String oldTokenHash = "hashedOldToken";
-
-        String newRefreshToken = "newToken";
-        String newTokenHash = "hashedNewToken";
-
-        String newAccessToken = "accessToken";
+        String refreshToken = "validRefreshToken";
+        String tokenHash = "hashedRefreshToken";
+        String newAccessToken = "newAccessTokenXYZ";
 
         User user = new User(
                 "test@email.com",
                 "testuser",
                 "password123");
 
-        RefreshToken refreshToken = new RefreshToken(
+        RefreshToken storedRefreshToken = new RefreshToken(
                 user,
-                oldTokenHash,
-                LocalDateTime.now().plusDays(1));
+                tokenHash,
+                LocalDateTime.now().plusDays(7)); // Token vẫn còn hạn
 
-        // mock hash của old token
-        when(refreshTokenService.hashToken(oldRefreshToken))
-                .thenReturn(oldTokenHash);
+        // ✅ Mock: hash của refresh token
+        when(refreshTokenService.hashToken(refreshToken))
+                .thenReturn(tokenHash);
 
-        when(refreshTokenRepo.findByTokenHash(oldTokenHash))
-                .thenReturn(Optional.of(refreshToken));
+        // ✅ Mock: tìm refresh token trong DB
+        when(refreshTokenRepo.findByTokenHash(tokenHash))
+                .thenReturn(Optional.of(storedRefreshToken));
 
+        // ✅ Mock: generate new access token
         when(jwtService.generateToken(user.getUsername()))
                 .thenReturn(newAccessToken);
 
-        when(refreshTokenService.generateRandomToken())
-                .thenReturn(newRefreshToken);
-
-        when(refreshTokenService.hashToken(newRefreshToken))
-                .thenReturn(newTokenHash);
-
         // Act
-        RefreshResultDto result = authService.refreshAccessToken(oldRefreshToken);
+        RefreshResultDto result = authService.refreshAccessToken(refreshToken);
 
         // Assert
+        // ✅ Chỉ trả về access token mới, refresh token vẫn cũ
+        assertNotNull(result);
         assertEquals(newAccessToken, result.getNewAccessToken());
-        assertEquals(newRefreshToken, result.getNewRefreshToken());
 
-        verify(refreshTokenRepo).save(refreshToken);
+        // ✅ KHÔNG tạo refresh token mới
+        verify(refreshTokenService, never()).generateRandomToken();
+
+        // ✅ KHÔNG update database
+        verify(refreshTokenRepo, never()).save(any());
     }
 }

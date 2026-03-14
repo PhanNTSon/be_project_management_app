@@ -2,18 +2,28 @@ package pma.common.security;
 
 import java.io.IOException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import pma.common.exception.ErrorResponse;
 
 /**
  * Lớp Filter kích hoạt mỗi lần có Request đi vào server (OncePerRequestFilter).
@@ -23,6 +33,8 @@ import lombok.RequiredArgsConstructor;
 @Component
 @RequiredArgsConstructor
 public class JwtFilter extends OncePerRequestFilter {
+    private static final Logger logger = LoggerFactory.getLogger(JwtFilter.class);
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final JwtService jwtService;
     private final CustomUserDetailService customUserDetailService;
 
@@ -75,10 +87,34 @@ public class JwtFilter extends OncePerRequestFilter {
                 }
             }
 
+        } catch (ExpiredJwtException e) {
+            logger.debug("JWT token expired: {}", e.getMessage());
+            sendUnauthorizedResponse(response, "Token đã hết hạn");
+            return;
+        } catch (SignatureException e) {
+            logger.debug("JWT signature validation failed: {}", e.getMessage());
+            sendUnauthorizedResponse(response, "Token signature không hợp lệ");
+            return;
+        } catch (MalformedJwtException e) {
+            logger.debug("JWT token malformed: {}", e.getMessage());
+            sendUnauthorizedResponse(response, "Token format không hợp lệ");
+            return;
         } catch (Exception e) {
-            // Nuốt lỗi (token sai, hết hạn v.v...). Code không ném lỗi ra ngoài mà chỉ việc 
-            // bỏ qua (Context vẫn null, người dùng sẽ tự bị văng ra nếu API đó bị chặn Authentication).
+            logger.debug("JWT validation error: {}", e.getMessage());
+            sendUnauthorizedResponse(response, "Token không hợp lệ");
+            return;
         }
         filterChain.doFilter(request, response);
+    }
+
+    /**
+     * Ghi thẳng JSON error response vào HttpServletResponse với status 401.
+     */
+    private void sendUnauthorizedResponse(HttpServletResponse response, String message) throws IOException {
+        response.setStatus(HttpStatus.UNAUTHORIZED.value());
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding("UTF-8");
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.UNAUTHORIZED.value(), message);
+        response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
     }
 }

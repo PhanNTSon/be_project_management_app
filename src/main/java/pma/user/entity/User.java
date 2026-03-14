@@ -122,5 +122,7 @@ public class User {
     public void assignRole(Role role) {
         UserRole userRole = new UserRole(this, role);
         this.userRoles.add(userRole);
+        // Note: When persisting to database, UserRole must be explicitly saved
+        // by the service layer using UserRoleRepo (it does not cascade from User)
     }
 }

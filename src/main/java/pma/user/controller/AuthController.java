@@ -41,14 +41,11 @@ public class AuthController {
                                 .httpOnly(true)
                                 .secure(false) // Set thành true nếu chạy HTTPS
                                 .sameSite("Lax")
-                                .path("/api/auth")
+                                .path("/")
                                 .maxAge(7 * 24 * 60 * 60) // 7 ngày
                                 .build();
 
                 ResponseLoginDto response = new ResponseLoginDto(
-                                loginResult.getUser().getUsername(),
-                                loginResult.getUser().getFullName(),
-                                loginResult.getUser().getEmail(),
                                 loginResult.getAccessToken(),
                                 "Bearer");
                 return ResponseEntity.ok()
@@ -61,20 +58,9 @@ public class AuthController {
                         @CookieValue("refresh_token") String refreshToken) {
 
                 RefreshResultDto refreshResult = authService.refreshAccessToken(refreshToken);
-                ResponseCookie newCookie = ResponseCookie.from("refresh_token", refreshResult.getNewRefreshToken())
-                                .httpOnly(true)
-                                .secure(false)
-                                .sameSite("Lax")
-                                .path("/api/auth")
-                                .maxAge(7 * 24 * 60 * 60)
-                                .build();
-
                 ResponseRefreshTokenDto response = new ResponseRefreshTokenDto(refreshResult.getNewAccessToken());
 
-                return ResponseEntity
-                                .ok()
-                                .header(HttpHeaders.SET_COOKIE, newCookie.toString())
-                                .body(response);
+                return ResponseEntity.ok().body(response);
         }
 
         @PostMapping("/logout")
@@ -84,7 +70,7 @@ public class AuthController {
                                 .httpOnly(true)
                                 .secure(false)
                                 .sameSite("Lax")
-                                .path("/api/auth") // ✅ phải khớp với path khi set cookie lúc login
+                                .path("/")
                                 .maxAge(0)
                                 .build();
 
