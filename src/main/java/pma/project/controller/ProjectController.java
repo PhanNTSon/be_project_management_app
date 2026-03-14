@@ -105,4 +105,12 @@ public class ProjectController {
         Long userId = getCurrentUserId(userDetails);
         return ResponseEntity.ok(projectService.getPermissions(projectId, userId));
     }
+
+    @GetMapping("/{projectId}/my-role")
+    public ResponseEntity<ResponseRoleDto> getMyRole(
+            @PathVariable Integer projectId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = getCurrentUserId(userDetails);
+        return ResponseEntity.ok(projectService.getUserRole(projectId, userId));
+    }
 }

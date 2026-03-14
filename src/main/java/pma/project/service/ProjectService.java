@@ -12,13 +12,13 @@ import pma.common.exception.CustomException.ProjectNotFoundException;
 import pma.common.mapper.*;
 import pma.project.dto.request.RequestCreateProjectDto;
 import pma.project.dto.response.*;
+import pma.common.exception.CustomException.UserNotFoundException;
 import pma.project.entity.core.*;
 import pma.project.entity.member.ProjectMember;
-import pma.project.entity.member.ProjectMemberId;
 import pma.project.repository.*;
 import pma.user.entity.User;
 import pma.user.repository.UserRepo;
-import pma.common.exception.CustomException.UserNotFoundException;
+
 
 @Service
 @RequiredArgsConstructor
@@ -83,11 +83,17 @@ public class ProjectService {
     }
 
     public List<ResponsePermissionDto> getPermissions(Integer projectId, Long userId) {
-        ProjectMember member = projectMemberRepository.findById(new ProjectMemberId(projectId, userId))
+        ProjectMember member = projectMemberRepository.findByProject_ProjectIdAndUser_UserId(projectId, userId)
                 .orElseThrow(ProjectNotFoundException::new);
         return member.getProjectRole().getPermissions().stream()
                 .map(p -> new ResponsePermissionDto(p.getCode(), p.getDescription()))
                 .toList();
+    }
+
+    public ResponseRoleDto getUserRole(Integer projectId, Long userId) {
+        ProjectMember member = projectMemberRepository.findByProject_ProjectIdAndUser_UserId(projectId, userId)
+                .orElseThrow(ProjectNotFoundException::new);
+        return new ResponseRoleDto(member.getProjectRole().getName());
     }
 
     // =====================================================================

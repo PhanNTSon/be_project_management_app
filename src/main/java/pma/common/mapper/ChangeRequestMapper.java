@@ -2,6 +2,7 @@ package pma.common.mapper;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+
 import pma.project.dto.response.ResponseChangeRequestDto;
 import pma.project.dto.response.ResponseChangeRequestDto.ResponseChangeItemDto;
 import pma.project.entity.change.ChangeItem;
