@@ -44,6 +44,7 @@ public class ProjectService {
     private final UsecaseFlowRepository usecaseFlowRepository;
     private final UsecaseBusinessRuleRepository usecaseBusinessRuleRepository;
     private final UsecaseActorRepository usecaseActorRepository;
+    private final UsecaseDiagramUrlRepository usecaseDiagramUrlRepository;
 
     // --- Mappers ---
     private final ProjectMapper projectMapper;
@@ -108,6 +109,23 @@ public class ProjectService {
         return new ResponseRoleDto(member.getProjectRole().getName());
     }
 
+    // =====================================================================
+    // UPDATE
+    // =====================================================================
+
+    @Transactional
+    public void updateContextDiagramUrl(Long userId, Integer projectId, pma.project.dto.request.RequestUpdateContextDiagramDto dto) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(ProjectNotFoundException::new);
+        
+        // Ensure user is part of the project before allowing update (or rely on @PreAuthorize/Permissions elsewhere)
+        projectMemberRepository.findByProject_ProjectIdAndUser_UserId(projectId, userId)
+                .orElseThrow(ProjectNotFoundException::new);
+
+        project.setContextDiagramUrl(dto.getUrl());
+        projectRepository.save(project);
+    }
+    
     // =====================================================================
     // CREATE / DELETE
     // =====================================================================
@@ -188,6 +206,9 @@ public class ProjectService {
         // actor — first linked Actor's name (frontend treats actor as a single string)
         List<UsecaseActor> actorLinks = usecaseActorRepository.findByUsecase_UsecaseId(id);
         dto.setActor(actorLinks.isEmpty() ? "" : actorLinks.get(0).getActor().getActorName());
+
+        // diagramUrl — from UsecaseDiagramUrl mapped entity
+        usecaseDiagramUrlRepository.findById(id).ifPresent(diagram -> dto.setDiagramUrl(diagram.getDiagramUrl()));
 
         return dto;
     }

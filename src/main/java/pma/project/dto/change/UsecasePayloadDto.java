@@ -21,4 +21,5 @@ public class UsecasePayloadDto {
     private List<String> normalFlows;
     private List<String> alterFlows;
     private List<String> linkedBusinessRuleIds;
+    private String diagramUrl;
 }

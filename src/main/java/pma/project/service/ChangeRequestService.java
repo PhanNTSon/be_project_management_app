@@ -61,6 +61,7 @@ public class ChangeRequestService {
     private final UsecaseFlowRepository usecaseFlowRepository;
     private final UsecaseBusinessRuleRepository usecaseBusinessRuleRepository;
     private final UsecaseActorRepository usecaseActorRepository;
+    private final UsecaseDiagramUrlRepository usecaseDiagramUrlRepository;
 
     // =====================================================================
     // PUBLIC API METHODS
@@ -350,6 +351,21 @@ public class ChangeRequestService {
             } catch (Exception e) {
                 log.warn("Failed to link Actor {}: {}", actorName, e.getMessage());
             }
+        }
+        
+        // Save Diagram URL
+        if (dto.getDiagramUrl() != null && !dto.getDiagramUrl().trim().isEmpty()) {
+            UsecaseDiagramUrl urlEntity = usecaseDiagramUrlRepository.findById(usecase.getUsecaseId())
+                    .orElseGet(() -> {
+                        UsecaseDiagramUrl udu = new UsecaseDiagramUrl();
+                        udu.setUsecase(usecase);
+                        return udu;
+                    });
+            urlEntity.setDiagramUrl(dto.getDiagramUrl());
+            usecaseDiagramUrlRepository.save(urlEntity);
+        } else {
+            // If it's cleared or null, remove the existing diagram if any
+            usecaseDiagramUrlRepository.findById(usecase.getUsecaseId()).ifPresent(usecaseDiagramUrlRepository::delete);
         }
     }
 
