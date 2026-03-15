@@ -140,14 +140,15 @@ public class ProjectService {
 
         Project project = new Project(dto.getProjectName(), owner);
         project.setDescription(dto.getDescription());
-        project = projectRepository.save(project);
 
         // Gán OWNER role cho người tạo qua ProjectMember
         var ownerRole = projectRoleRepository.findByName("OWNER")
                 .orElseThrow(() -> new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "System role OWNER not found. Please check seed data."));
 
         ProjectMember member = new ProjectMember(project, owner, ownerRole);
-        projectMemberRepository.save(member);
+        project.getMembers().add(member);
+
+        project = projectRepository.save(project);
 
         return projectMapper.toDto(project);
     }

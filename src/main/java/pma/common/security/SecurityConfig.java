@@ -41,8 +41,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Cấu hình danh sách endpoint và quyền tương ứng
                         .requestMatchers("/api/auth/**").permitAll() // Các API liên quan tới đăng nhập/đăng ký thì ai cũng vào được
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN") // Các API bắt đầu bằng /admin/ bắt buộc phải có Role ADMIN
-                        .requestMatchers("/api/users/**").hasAnyRole("USER", "ADMIN") // Bắt buộc Role USER hoặc ADMIN
+                        .requestMatchers("/api/admin/**").hasAuthority("ADMIN") // Các API bắt đầu bằng /admin/ bắt buộc phải có Role ADMIN
+                        .requestMatchers("/api/users/**").hasAnyAuthority("USER", "ADMIN") // Bắt buộc Role USER hoặc ADMIN
                         .anyRequest().authenticated()) // Tất cả API khác đều phải có token đăng nhập hợp lệ
                 
                 // Đẩy Filter tự chế (JwtFilter) lên trước Filter kiểm tra User/Password mặc định của Spring.
