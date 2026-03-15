@@ -80,4 +80,32 @@ public class ChangeRequestController {
         Long userId = getCurrentUserId(userDetails);
         return ResponseEntity.ok(changeRequestService.rejectChangeRequest(userId, requestId));
     }
+
+    /**
+     * Phê duyệt một ChangeItem cụ thể.
+     */
+    @PostMapping("/{requestId}/items/{itemId}/approve")
+    public ResponseEntity<ChangeRequest> approveChangeItem(
+            @PathVariable Integer projectId,
+            @PathVariable Integer requestId,
+            @PathVariable Integer itemId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        Long userId = getCurrentUserId(userDetails);
+        return ResponseEntity.ok(changeRequestService.approveChangeItem(userId, requestId, itemId));
+    }
+
+    /**
+     * Từ chối một ChangeItem cụ thể.
+     */
+    @PostMapping("/{requestId}/items/{itemId}/reject")
+    public ResponseEntity<ChangeRequest> rejectChangeItem(
+            @PathVariable Integer projectId,
+            @PathVariable Integer requestId,
+            @PathVariable Integer itemId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        Long userId = getCurrentUserId(userDetails);
+        return ResponseEntity.ok(changeRequestService.rejectChangeItem(userId, requestId, itemId));
+    }
 }

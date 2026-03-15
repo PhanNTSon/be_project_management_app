@@ -126,6 +126,14 @@ public class ChangeRequestService {
 
         projectPermissionService.validatePermission(reviewerId, request.getProject().getProjectId(), "APPROVE_CHANGE");
 
+        List<ChangeItem> items = changeItemRepository.findByChangeRequest_ChangeRequestId(request.getChangeRequestId());
+        for (ChangeItem item : items) {
+            if ("PENDING".equals(item.getStatus())) {
+                item.setStatus("REJECTED");
+                changeItemRepository.save(item);
+            }
+        }
+
         User reviewer = userRepository.findById(reviewerId)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
         request.setStatus("REJECTED");
@@ -135,26 +143,115 @@ public class ChangeRequestService {
         return changeRequestRepository.save(request);
     }
 
+    @Transactional
+    public ChangeRequest approveChangeItem(Long reviewerId, Integer requestId, Integer itemId) {
+        ChangeRequest request = changeRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ChangeRequestNotFoundException(requestId));
+
+        projectPermissionService.validatePermission(reviewerId, request.getProject().getProjectId(), "APPROVE_CHANGE");
+
+        ChangeItem item = changeItemRepository.findById(itemId)
+                .orElseThrow(() -> new IllegalArgumentException("ChangeItem not found: " + itemId));
+
+        if (!item.getChangeRequest().getChangeRequestId().equals(requestId)) {
+            throw new IllegalArgumentException("Item does not belong to the request");
+        }
+
+        if (!"PENDING".equals(item.getStatus())) {
+            throw new IllegalStateException("Item is already " + item.getStatus());
+        }
+
+        // Apply item
+        validateChangeItem(item);
+        dispatchChangeItem(item, request.getProject(), request.getRequester());
+
+        // Update item status
+        item.setStatus("APPROVED");
+        changeItemRepository.save(item);
+
+        return updateChangeRequestStatusIfComplete(reviewerId, request);
+    }
+
+    @Transactional
+    public ChangeRequest rejectChangeItem(Long reviewerId, Integer requestId, Integer itemId) {
+        ChangeRequest request = changeRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ChangeRequestNotFoundException(requestId));
+
+        projectPermissionService.validatePermission(reviewerId, request.getProject().getProjectId(), "APPROVE_CHANGE");
+
+        ChangeItem item = changeItemRepository.findById(itemId)
+                .orElseThrow(() -> new IllegalArgumentException("ChangeItem not found: " + itemId));
+
+        if (!item.getChangeRequest().getChangeRequestId().equals(requestId)) {
+            throw new IllegalArgumentException("Item does not belong to the request");
+        }
+
+        if (!"PENDING".equals(item.getStatus())) {
+            throw new IllegalStateException("Item is already " + item.getStatus());
+        }
+
+        // Update item status
+        item.setStatus("REJECTED");
+        changeItemRepository.save(item);
+
+        return updateChangeRequestStatusIfComplete(reviewerId, request);
+    }
+
+    private ChangeRequest updateChangeRequestStatusIfComplete(Long reviewerId, ChangeRequest request) {
+        List<ChangeItem> items = changeItemRepository.findByChangeRequest_ChangeRequestId(request.getChangeRequestId());
+        
+        boolean allProcessed = true;
+        boolean anyApproved = false;
+
+        for (ChangeItem item : items) {
+            if ("PENDING".equals(item.getStatus())) {
+                allProcessed = false;
+                break;
+            }
+            if ("APPROVED".equals(item.getStatus())) {
+                anyApproved = true;
+            }
+        }
+
+        if (allProcessed) {
+            User reviewer = userRepository.findById(reviewerId)
+                    .orElseThrow(() -> new UserNotFoundException("User not found"));
+            request.setStatus(anyApproved ? "APPROVED" : "REJECTED");
+            request.setReviewedBy(reviewer);
+            request.setReviewedAt(LocalDateTime.now());
+            return changeRequestRepository.save(request);
+        }
+        return request;
+    }
+
     // =====================================================================
     // INTERNAL APPLY (shared by auto-approve and explicit approve)
     // =====================================================================
 
     /**
-     * Applies a ChangeRequest by processing all its ChangeItems.
+     * Applies a ChangeRequest by processing all its PENDING ChangeItems.
      * Does NOT re-validate permissions — callers are responsible for that.
      */
     private ChangeRequest applyChangeRequestInternal(Long reviewerId, ChangeRequest request) {
         List<ChangeItem> items = changeItemRepository.findByChangeRequest_ChangeRequestId(
                 request.getChangeRequestId());
 
+        boolean hasAppliedAny = false;
         for (ChangeItem item : items) {
-            validateChangeItem(item);
-            dispatchChangeItem(item, request.getProject(), request.getRequester());
+            if ("PENDING".equals(item.getStatus())) {
+                validateChangeItem(item);
+                dispatchChangeItem(item, request.getProject(), request.getRequester());
+                item.setStatus("APPROVED");
+                changeItemRepository.save(item);
+                hasAppliedAny = true;
+            } else if ("APPROVED".equals(item.getStatus())) {
+                hasAppliedAny = true;
+            }
         }
 
         User reviewer = userRepository.findById(reviewerId)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
-        request.setStatus("APPROVED");
+        request.setStatus(hasAppliedAny || items.isEmpty() ? "APPROVED" : "REJECTED");
         request.setReviewedBy(reviewer);
         request.setReviewedAt(LocalDateTime.now());
 
