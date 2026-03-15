@@ -14,6 +14,11 @@ import lombok.NoArgsConstructor;
 import pma.user.entity.User;
 import pma.project.entity.core.Project;
 import pma.project.entity.core.FunctionalRequirement;
+import java.util.ArrayList;
+import java.util.List;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 
 @Entity
 @Table(name = "Usecase")
@@ -51,6 +56,18 @@ public class Usecase {
 
     @Column(name = "[Priority]", length = 50)
     private String priority;
+
+    @OneToMany(mappedBy = "usecase", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UsecaseFlow> flows = new ArrayList<>();
+
+    @OneToMany(mappedBy = "usecase", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UsecaseActor> usecaseActors = new ArrayList<>();
+
+    @OneToMany(mappedBy = "usecase", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UsecaseBusinessRule> usecaseBusinessRules = new ArrayList<>();
+
+    @OneToOne(mappedBy = "usecase", cascade = CascadeType.ALL, orphanRemoval = true)
+    private UsecaseDiagramUrl diagramUrl;
 
     public void setProject(Project project) {
         if (project == null) {

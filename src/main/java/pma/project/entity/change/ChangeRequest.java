@@ -1,6 +1,10 @@
 package pma.project.entity.change;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.OneToMany;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -52,6 +56,9 @@ public class ChangeRequest {
 
     @Column(name = "CreatedAt")
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @OneToMany(mappedBy = "changeRequest", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ChangeItem> changeItems = new ArrayList<>();
 
     public ChangeRequest(Project project, User requester, String title, String description) {
         setProject(project);

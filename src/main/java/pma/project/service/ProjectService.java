@@ -12,6 +12,7 @@ import pma.common.exception.ApiException;
 import pma.common.exception.CustomException.ProjectNotFoundException;
 import pma.common.mapper.*;
 import pma.project.dto.request.RequestCreateProjectDto;
+import pma.project.dto.request.RequestUpdateProjectDto;
 import pma.project.dto.response.*;
 import pma.common.exception.CustomException.UserNotFoundException;
 import pma.project.entity.core.*;
@@ -114,6 +115,21 @@ public class ProjectService {
     // =====================================================================
 
     @Transactional
+    public void updateProject(Long userId, Integer projectId, RequestUpdateProjectDto dto) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(ProjectNotFoundException::new);
+
+        // Only OWNER can update project details
+        if (!project.getOwner().getUserId().equals(userId)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Only the project owner can update project details.");
+        }
+
+        project.setProjectName(dto.getProjectName());
+        project.setDescription(dto.getDescription());
+        projectRepository.save(project);
+    }
+
+    @Transactional
     public void updateContextDiagramUrl(Long userId, Integer projectId, pma.project.dto.request.RequestUpdateContextDiagramDto dto) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(ProjectNotFoundException::new);
@@ -140,6 +156,9 @@ public class ProjectService {
 
         Project project = new Project(dto.getProjectName(), owner);
         project.setDescription(dto.getDescription());
+
+        // Save project first to generate projectId
+        project = projectRepository.save(project);
 
         // Gán OWNER role cho người tạo qua ProjectMember
         var ownerRole = projectRoleRepository.findByName("OWNER")

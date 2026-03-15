@@ -59,6 +59,16 @@ public class ProjectController {
         return ResponseEntity.noContent().build();
     }
 
+    @PutMapping("/{projectId}")
+    public ResponseEntity<Void> updateProject(
+            @PathVariable Integer projectId,
+            @Valid @RequestBody RequestUpdateProjectDto dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = getCurrentUserId(userDetails);
+        projectService.updateProject(userId, projectId, dto);
+        return ResponseEntity.ok().build();
+    }
+
     // =====================================================================
     // PROJECT DATA QUERIES
     // =====================================================================

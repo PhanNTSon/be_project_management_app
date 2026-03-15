@@ -8,6 +8,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.OneToMany;
+import java.util.ArrayList;
+import java.util.List;
+import jakarta.persistence.CascadeType;
+import pma.project.entity.usecase.Usecase;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -30,6 +35,9 @@ public class FunctionalRequirement {
 
     @Column(name = "Description", columnDefinition = "NVARCHAR(MAX)")
     private String description;
+
+    @OneToMany(mappedBy = "functionalRequirement", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Usecase> usecases = new ArrayList<>();
 
     public void setProject(Project project) {
         if (project == null) {

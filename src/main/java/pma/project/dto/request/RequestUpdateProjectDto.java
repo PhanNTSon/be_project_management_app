@@ -1,0 +1,18 @@
+package pma.project.dto.request;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class RequestUpdateProjectDto {
+    @NotBlank(message = "Project name is required")
+    @Size(max = 255, message = "Project name cannot exceed 255 characters")
+    private String projectName;
+
+    private String description;
+}

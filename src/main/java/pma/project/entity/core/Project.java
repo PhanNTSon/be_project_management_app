@@ -1,9 +1,16 @@
 package pma.project.entity.core;
 
 import java.time.LocalDateTime;
-import pma.project.entity.member.ProjectMember;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
+import pma.project.entity.member.ProjectMember;
+import pma.project.entity.member.ProjectInvitation;
+import pma.project.entity.change.ChangeRequest;
+import pma.project.entity.usecase.Usecase;
+import pma.project.entity.usecase.Actor;
+import pma.project.entity.usecase.BusinessRule;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -51,6 +58,33 @@ public class Project {
 
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<ProjectMember> members = new HashSet<>();
+
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProjectInvitation> invitations = new ArrayList<>();
+
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<VisionScope> visionScopes = new ArrayList<>();
+
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Constraint> constraints = new ArrayList<>();
+
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<BusinessRule> businessRules = new ArrayList<>();
+
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<FunctionalRequirement> functionalRequirements = new ArrayList<>();
+
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<NonFunctionalRequirement> nonFunctionalRequirements = new ArrayList<>();
+
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Usecase> usecases = new ArrayList<>();
+
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Actor> actors = new ArrayList<>();
+
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ChangeRequest> changeRequests = new ArrayList<>();
 
     public Project(String projectName, User owner) {
         setProjectName(projectName);
