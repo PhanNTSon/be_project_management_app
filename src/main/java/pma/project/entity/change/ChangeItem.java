@@ -45,6 +45,9 @@ public class ChangeItem {
     @Column(name = "NewValue", columnDefinition = "NVARCHAR(MAX)")
     private String newValue;
 
+    @Column(name = "Status", nullable = false, length = 20)
+    private String status = "PENDING";
+
     @Column(name = "CreatedAt")
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -100,5 +103,16 @@ public class ChangeItem {
 
     public void setNewValue(String newValue) {
         this.newValue = newValue;
+    }
+
+    public void setStatus(String status) {
+        if (status == null) {
+            throw new IllegalArgumentException("Status cannot be null");
+        }
+        String upperStatus = status.toUpperCase();
+        if (!upperStatus.equals("PENDING") && !upperStatus.equals("APPROVED") && !upperStatus.equals("REJECTED")) {
+            throw new IllegalArgumentException("Status must be PENDING, APPROVED, or REJECTED");
+        }
+        this.status = upperStatus;
     }
 }
