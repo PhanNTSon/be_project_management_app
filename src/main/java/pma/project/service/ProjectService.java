@@ -1,6 +1,7 @@
 package pma.project.service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,10 @@ import pma.project.dto.response.*;
 import pma.common.exception.CustomException.UserNotFoundException;
 import pma.project.entity.core.*;
 import pma.project.entity.member.ProjectMember;
+import pma.project.entity.usecase.Usecase;
+import pma.project.entity.usecase.UsecaseActor;
+import pma.project.entity.usecase.UsecaseBusinessRule;
+import pma.project.entity.usecase.UsecaseFlow;
 import pma.project.repository.*;
 import pma.user.entity.User;
 import pma.user.repository.UserRepo;
@@ -34,6 +39,11 @@ public class ProjectService {
     private final ProjectMemberRepository projectMemberRepository;
     private final UserRepo userRepository;
     private final ProjectRoleRepository projectRoleRepository;
+
+    // Child-table repos for usecase enrichment
+    private final UsecaseFlowRepository usecaseFlowRepository;
+    private final UsecaseBusinessRuleRepository usecaseBusinessRuleRepository;
+    private final UsecaseActorRepository usecaseActorRepository;
 
     // --- Mappers ---
     private final ProjectMapper projectMapper;
@@ -71,7 +81,9 @@ public class ProjectService {
     }
 
     public List<ResponseUsecaseDto> getUsecases(Integer projectId) {
-        return usecaseMapper.toDtoList(usecaseRepository.findByProject_ProjectId(projectId));
+        return usecaseRepository.findByProject_ProjectId(projectId).stream()
+                .map(this::toEnrichedUsecaseDto)
+                .collect(Collectors.toList());
     }
 
     public List<ResponseFunctionalReqDto> getFunctionalRequirements(Integer projectId) {
@@ -136,5 +148,47 @@ public class ProjectService {
         }
 
         projectRepository.delete(project);
+    }
+
+    // =====================================================================
+    // PRIVATE: USECASE ENRICHMENT
+    // =====================================================================
+
+    /**
+     * Enriches a Usecase entity into a full ResponseUsecaseDto by joining
+     * UsecaseFlow, UsecaseBusinessRule, and UsecaseActor child tables.
+     */
+    private ResponseUsecaseDto toEnrichedUsecaseDto(Usecase uc) {
+        ResponseUsecaseDto dto = usecaseMapper.toDto(uc);
+
+        // functionRelId — from @ManyToOne navigation (never null per entity constraint)
+        if (uc.getFunctionalRequirement() != null) {
+            dto.setFunctionRelId(uc.getFunctionalRequirement().getRequirementId());
+        }
+
+        Integer id = uc.getUsecaseId();
+
+        // normalFlows and alterFlows — from UsecaseFlow child table
+        List<UsecaseFlow> flows = usecaseFlowRepository.findByUsecase_UsecaseId(id);
+        dto.setNormalFlows(flows.stream()
+                .filter(f -> "NORMAL".equals(f.getFlowType()))
+                .map(UsecaseFlow::getDescription)
+                .collect(Collectors.toList()));
+        dto.setAlterFlows(flows.stream()
+                .filter(f -> "ALTERNATIVE".equals(f.getFlowType()))
+                .map(UsecaseFlow::getDescription)
+                .collect(Collectors.toList()));
+
+        // linkedBusinessRuleIds — from UsecaseBusinessRule join table
+        List<UsecaseBusinessRule> brLinks = usecaseBusinessRuleRepository.findByUsecase_UsecaseId(id);
+        dto.setLinkedBusinessRuleIds(brLinks.stream()
+                .map(link -> link.getBusinessRule().getRuleId())
+                .collect(Collectors.toList()));
+
+        // actor — first linked Actor's name (frontend treats actor as a single string)
+        List<UsecaseActor> actorLinks = usecaseActorRepository.findByUsecase_UsecaseId(id);
+        dto.setActor(actorLinks.isEmpty() ? "" : actorLinks.get(0).getActor().getActorName());
+
+        return dto;
     }
 }

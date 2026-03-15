@@ -23,6 +23,7 @@ import pma.project.repository.*;
 import pma.user.entity.User;
 import pma.user.repository.UserRepo;
 
+import jakarta.persistence.EntityManager;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -39,6 +40,7 @@ public class ChangeRequestService {
     private final UserRepo userRepository;
     private final ObjectMapper objectMapper;
     private final ChangeRequestMapper changeRequestMapper;
+    private final EntityManager entityManager;
 
     // --- DTO Mappers for entity conversion ---
     private final UsecaseMapper usecaseMapper;
@@ -58,6 +60,7 @@ public class ChangeRequestService {
     private final ActorRepository actorRepository;
     private final UsecaseFlowRepository usecaseFlowRepository;
     private final UsecaseBusinessRuleRepository usecaseBusinessRuleRepository;
+    private final UsecaseActorRepository usecaseActorRepository;
 
     // =====================================================================
     // PUBLIC API METHODS
@@ -97,7 +100,10 @@ public class ChangeRequestService {
         }
 
         if (canEditDirect) {
-            return applyChangeRequest(userId, request.getChangeRequestId());
+            // Flush to ensure the new ChangeRequest and its ChangeItems are visible
+            // within the same transaction before reading them back for apply.
+            entityManager.flush();
+            return applyChangeRequestInternal(userId, request);
         }
 
         return request;
@@ -110,19 +116,7 @@ public class ChangeRequestService {
 
         projectPermissionService.validatePermission(reviewerId, request.getProject().getProjectId(), "APPROVE_CHANGE");
 
-        List<ChangeItem> items = changeItemRepository.findByChangeRequest_ChangeRequestId(requestId);
-        for (ChangeItem item : items) {
-            validateChangeItem(item);
-            dispatchChangeItem(item, request.getProject(), request.getRequester());
-        }
-
-        User reviewer = userRepository.findById(reviewerId)
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
-        request.setStatus("APPROVED");
-        request.setReviewedBy(reviewer);
-        request.setReviewedAt(LocalDateTime.now());
-
-        return changeRequestRepository.save(request);
+        return applyChangeRequestInternal(reviewerId, request);
     }
 
     @Transactional
@@ -135,6 +129,32 @@ public class ChangeRequestService {
         User reviewer = userRepository.findById(reviewerId)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
         request.setStatus("REJECTED");
+        request.setReviewedBy(reviewer);
+        request.setReviewedAt(LocalDateTime.now());
+
+        return changeRequestRepository.save(request);
+    }
+
+    // =====================================================================
+    // INTERNAL APPLY (shared by auto-approve and explicit approve)
+    // =====================================================================
+
+    /**
+     * Applies a ChangeRequest by processing all its ChangeItems.
+     * Does NOT re-validate permissions — callers are responsible for that.
+     */
+    private ChangeRequest applyChangeRequestInternal(Long reviewerId, ChangeRequest request) {
+        List<ChangeItem> items = changeItemRepository.findByChangeRequest_ChangeRequestId(
+                request.getChangeRequestId());
+
+        for (ChangeItem item : items) {
+            validateChangeItem(item);
+            dispatchChangeItem(item, request.getProject(), request.getRequester());
+        }
+
+        User reviewer = userRepository.findById(reviewerId)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+        request.setStatus("APPROVED");
         request.setReviewedBy(reviewer);
         request.setReviewedAt(LocalDateTime.now());
 
@@ -167,7 +187,7 @@ public class ChangeRequestService {
     // =====================================================================
 
     private void dispatchChangeItem(ChangeItem item, Project project, User createdByUser) {
-        log.info("🔷 Applying change: entityType={}, operation={}, entityId={}",
+        log.info("Applying change: entityType={}, operation={}, entityId={}",
                 item.getEntityType(), item.getOperation(), item.getEntityId());
         try {
             switch (item.getEntityType().toUpperCase()) {
@@ -181,9 +201,11 @@ public class ChangeRequestService {
                 case "PROJECT"            -> applyProjectChange(item);
                 default -> throw new IllegalArgumentException("Unknown entity type: " + item.getEntityType());
             }
-            log.info("✅ Successfully processed change item");
+            log.info("Successfully processed change item: entityType={}, operation={}",
+                    item.getEntityType(), item.getOperation());
         } catch (Exception e) {
-            log.error("❌ Error processing change item: {}", e.getMessage(), e);
+            log.error("Error processing change item: entityType={}, operation={}, error={}",
+                    item.getEntityType(), item.getOperation(), e.getMessage(), e);
             throw new IllegalArgumentException("Failed to apply change: " + e.getMessage(), e);
         }
     }
@@ -203,17 +225,18 @@ public class ChangeRequestService {
             throw new IllegalArgumentException("CREATE operation requires createdBy user");
         }
 
-        log.info("📝 CREATE USECASE: Building usecase from payload");
+        log.info("Creating Usecase from payload");
 
         UsecasePayloadDto dto = parseJson(item.getNewValue(), UsecasePayloadDto.class);
         Usecase usecase = usecaseMapper.toEntity(dto);
         usecase.setProject(project);
         usecase.setCreatedBy(createdByUser);
 
-        // Validate and set FunctionalRequirement
-        if (dto.getFunctionRelId() != null) {
-            FunctionalRequirement fr = functionalRequirementRepository.findById(dto.getFunctionRelId())
-                    .orElseThrow(() -> new EntityNotFoundException("FunctionalRequirement", dto.getFunctionRelId()));
+        // Validate and set FunctionalRequirement (ignoring empty/temp IDs)
+        if (dto.getFunctionRelId() != null && !dto.getFunctionRelId().trim().isEmpty() && !dto.getFunctionRelId().startsWith("temp-")) {
+            Integer frId = Integer.valueOf(dto.getFunctionRelId());
+            FunctionalRequirement fr = functionalRequirementRepository.findById(frId)
+                    .orElseThrow(() -> new EntityNotFoundException("FunctionalRequirement", frId));
             usecase.setFunctionalRequirement(fr);
         } else {
             FunctionalRequirement firstFr = functionalRequirementRepository.findByProject_ProjectId(project.getProjectId())
@@ -223,13 +246,13 @@ public class ChangeRequestService {
         }
 
         usecaseRepository.save(usecase);
-        log.info("✅ Usecase created with ID: {}", usecase.getUsecaseId());
+        log.info("Usecase created with ID: {}", usecase.getUsecaseId());
 
         createUsecaseRelatedEntities(usecase, dto);
     }
 
     private void updateUsecase(ChangeItem item, Project project) {
-        log.info("✏️ UPDATE USECASE: Updating usecase {}", item.getEntityId());
+        log.info("Updating Usecase id={}", item.getEntityId());
 
         Usecase usecase = usecaseRepository.findById(item.getEntityId())
                 .orElseThrow(() -> new EntityNotFoundException("Usecase", item.getEntityId()));
@@ -237,22 +260,23 @@ public class ChangeRequestService {
         UsecasePayloadDto dto = parseJson(item.getNewValue(), UsecasePayloadDto.class);
         usecaseMapper.updateEntity(dto, usecase);
 
-        if (dto.getFunctionRelId() != null) {
-            FunctionalRequirement fr = functionalRequirementRepository.findById(dto.getFunctionRelId())
-                    .orElseThrow(() -> new EntityNotFoundException("FunctionalRequirement", dto.getFunctionRelId()));
+        if (dto.getFunctionRelId() != null && !dto.getFunctionRelId().trim().isEmpty() && !dto.getFunctionRelId().startsWith("temp-")) {
+            Integer frId = Integer.valueOf(dto.getFunctionRelId());
+            FunctionalRequirement fr = functionalRequirementRepository.findById(frId)
+                    .orElseThrow(() -> new EntityNotFoundException("FunctionalRequirement", frId));
             usecase.setFunctionalRequirement(fr);
         }
 
         usecaseRepository.save(usecase);
-        log.info("✅ Usecase updated successfully");
+        log.info("Usecase id={} updated successfully", item.getEntityId());
 
         updateUsecaseRelatedEntities(usecase, dto);
     }
 
     private void deleteUsecase(ChangeItem item) {
-        log.info("🗑️ DELETE USECASE: Deleting usecase {}", item.getEntityId());
+        log.info("Deleting Usecase id={}", item.getEntityId());
         usecaseRepository.deleteById(item.getEntityId());
-        log.info("✅ Usecase deleted successfully");
+        log.info("Usecase id={} deleted successfully", item.getEntityId());
     }
 
     private void createUsecaseRelatedEntities(Usecase usecase, UsecasePayloadDto dto) {
@@ -266,9 +290,8 @@ public class ChangeRequestService {
                     flow.setDescription(flowDesc);
                     flow.setAlternative(false);
                     usecaseFlowRepository.save(flow);
-                    log.debug("✅ Created NORMAL flow");
                 } catch (Exception e) {
-                    log.warn("⚠️ Failed to create normal flow: {}", e.getMessage());
+                    log.warn("Failed to create normal flow: {}", e.getMessage());
                 }
             }
         }
@@ -282,44 +305,66 @@ public class ChangeRequestService {
                     flow.setDescription(flowDesc);
                     flow.setAlternative(true);
                     usecaseFlowRepository.save(flow);
-                    log.debug("✅ Created ALTERNATIVE flow");
                 } catch (Exception e) {
-                    log.warn("⚠️ Failed to create alternative flow: {}", e.getMessage());
+                    log.warn("Failed to create alternative flow: {}", e.getMessage());
                 }
             }
         }
 
         // Create business rule links
         if (dto.getLinkedBusinessRuleIds() != null) {
-            for (Integer brId : dto.getLinkedBusinessRuleIds()) {
+            for (String brIdStr : dto.getLinkedBusinessRuleIds()) {
+                if (brIdStr == null || brIdStr.trim().isEmpty() || brIdStr.startsWith("temp-")) {
+                    continue; // Skip temporary or invalid links
+                }
                 try {
+                    Integer brId = Integer.valueOf(brIdStr);
                     BusinessRule br = businessRuleRepository.findById(brId)
                             .orElseThrow(() -> new EntityNotFoundException("BusinessRule", brId));
                     UsecaseBusinessRule ubr = new UsecaseBusinessRule(usecase, br);
                     usecaseBusinessRuleRepository.save(ubr);
-                    log.debug("✅ Linked BusinessRule {}", brId);
                 } catch (Exception e) {
-                    log.warn("⚠️ Failed to link BusinessRule: {}", e.getMessage());
+                    log.warn("Failed to link BusinessRule id={}: {}", brIdStr, e.getMessage());
                 }
+            }
+        }
+        
+        // Link actor
+        if (dto.getActor() != null && !dto.getActor().trim().isEmpty()) {
+            String actorName = dto.getActor().trim();
+            // Try to find existing actor in this project, or create a new one
+            Actor actor = actorRepository.findByProject_ProjectId(usecase.getProject().getProjectId())
+                    .stream()
+                    .filter(a -> a.getActorName().equalsIgnoreCase(actorName))
+                    .findFirst()
+                    .orElseGet(() -> {
+                        Actor newActor = new Actor();
+                        newActor.setProject(usecase.getProject());
+                        newActor.setActorName(actorName);
+                        return actorRepository.save(newActor);
+                    });
+            
+            try {
+                UsecaseActor ua = new UsecaseActor(usecase, actor);
+                usecaseActorRepository.save(ua);
+            } catch (Exception e) {
+                log.warn("Failed to link Actor {}: {}", actorName, e.getMessage());
             }
         }
     }
 
     private void updateUsecaseRelatedEntities(Usecase usecase, UsecasePayloadDto dto) {
-        log.info("🔄 Updating usecase related entities for usecase ID: {}", usecase.getUsecaseId());
+        log.info("Updating related entities for Usecase id={}", usecase.getUsecaseId());
 
-        // PHASE 6: Delete old flows and business rule links before recreating
         try {
             usecaseFlowRepository.deleteByUsecase_UsecaseId(usecase.getUsecaseId());
             usecaseBusinessRuleRepository.deleteByUsecase_UsecaseId(usecase.getUsecaseId());
-            log.info("✅ Deleted old flows and business rule links");
         } catch (Exception e) {
-            log.warn("⚠️ Error deleting old relationships: {}", e.getMessage());
+            log.warn("Error deleting old relationships for Usecase id={}: {}", usecase.getUsecaseId(), e.getMessage());
         }
 
-        // Recreate all relationships
         createUsecaseRelatedEntities(usecase, dto);
-        log.info("✅ Usecase related entities updated");
+        log.info("Related entities updated for Usecase id={}", usecase.getUsecaseId());
     }
 
     // ---- VISION SCOPE ----
@@ -333,28 +378,28 @@ public class ChangeRequestService {
     }
 
     private void createVisionScope(ChangeItem item, Project project) {
-        log.info("📝 CREATE VISION_SCOPE");
+        log.info("Creating VisionScope");
         VisionScopePayloadDto dto = parseJson(item.getNewValue(), VisionScopePayloadDto.class);
         VisionScope vs = visionScopeMapper.toEntity(dto);
         vs.setProject(project);
         visionScopeRepository.save(vs);
-        log.info("✅ VisionScope created successfully");
+        log.info("VisionScope created successfully");
     }
 
     private void updateVisionScope(ChangeItem item) {
-        log.info("✏️ UPDATE VISION_SCOPE: {}", item.getEntityId());
+        log.info("Updating VisionScope id={}", item.getEntityId());
         VisionScope vs = visionScopeRepository.findById(item.getEntityId())
                 .orElseThrow(() -> new EntityNotFoundException("VisionScope", item.getEntityId()));
         VisionScopePayloadDto dto = parseJson(item.getNewValue(), VisionScopePayloadDto.class);
         visionScopeMapper.updateEntity(dto, vs);
         visionScopeRepository.save(vs);
-        log.info("✅ VisionScope updated successfully");
+        log.info("VisionScope id={} updated successfully", item.getEntityId());
     }
 
     private void deleteVisionScope(ChangeItem item) {
-        log.info("🗑️ DELETE VISION_SCOPE: {}", item.getEntityId());
+        log.info("Deleting VisionScope id={}", item.getEntityId());
         visionScopeRepository.deleteById(item.getEntityId());
-        log.info("✅ VisionScope deleted successfully");
+        log.info("VisionScope id={} deleted successfully", item.getEntityId());
     }
 
     // ---- CONSTRAINT ----
@@ -368,28 +413,28 @@ public class ChangeRequestService {
     }
 
     private void createConstraint(ChangeItem item, Project project) {
-        log.info("📝 CREATE CONSTRAINT");
+        log.info("Creating Constraint");
         ConstraintPayloadDto dto = parseJson(item.getNewValue(), ConstraintPayloadDto.class);
         Constraint c = constraintMapper.toEntity(dto);
         c.setProject(project);
         constraintRepository.save(c);
-        log.info("✅ Constraint created successfully");
+        log.info("Constraint created successfully");
     }
 
     private void updateConstraint(ChangeItem item) {
-        log.info("✏️ UPDATE CONSTRAINT: {}", item.getEntityId());
+        log.info("Updating Constraint id={}", item.getEntityId());
         Constraint c = constraintRepository.findById(item.getEntityId())
                 .orElseThrow(() -> new EntityNotFoundException("Constraint", item.getEntityId()));
         ConstraintPayloadDto dto = parseJson(item.getNewValue(), ConstraintPayloadDto.class);
         constraintMapper.updateEntity(dto, c);
         constraintRepository.save(c);
-        log.info("✅ Constraint updated successfully");
+        log.info("Constraint id={} updated successfully", item.getEntityId());
     }
 
     private void deleteConstraint(ChangeItem item) {
-        log.info("🗑️ DELETE CONSTRAINT: {}", item.getEntityId());
+        log.info("Deleting Constraint id={}", item.getEntityId());
         constraintRepository.deleteById(item.getEntityId());
-        log.info("✅ Constraint deleted successfully");
+        log.info("Constraint id={} deleted successfully", item.getEntityId());
     }
 
     // ---- FUNCTIONAL REQUIREMENT ----
@@ -403,28 +448,28 @@ public class ChangeRequestService {
     }
 
     private void createFunctionalReq(ChangeItem item, Project project) {
-        log.info("📝 CREATE FUNCTIONAL_REQ");
+        log.info("Creating FunctionalRequirement");
         FunctionalRequirementPayloadDto dto = parseJson(item.getNewValue(), FunctionalRequirementPayloadDto.class);
         FunctionalRequirement req = functionalReqMapper.toEntity(dto);
         req.setProject(project);
         functionalRequirementRepository.save(req);
-        log.info("✅ FunctionalRequirement created successfully");
+        log.info("FunctionalRequirement created successfully");
     }
 
     private void updateFunctionalReq(ChangeItem item) {
-        log.info("✏️ UPDATE FUNCTIONAL_REQ: {}", item.getEntityId());
+        log.info("Updating FunctionalRequirement id={}", item.getEntityId());
         FunctionalRequirement req = functionalRequirementRepository.findById(item.getEntityId())
                 .orElseThrow(() -> new EntityNotFoundException("FunctionalRequirement", item.getEntityId()));
         FunctionalRequirementPayloadDto dto = parseJson(item.getNewValue(), FunctionalRequirementPayloadDto.class);
         functionalReqMapper.updateEntity(dto, req);
         functionalRequirementRepository.save(req);
-        log.info("✅ FunctionalRequirement updated successfully");
+        log.info("FunctionalRequirement id={} updated successfully", item.getEntityId());
     }
 
     private void deleteFunctionalReq(ChangeItem item) {
-        log.info("🗑️ DELETE FUNCTIONAL_REQ: {}", item.getEntityId());
+        log.info("Deleting FunctionalRequirement id={}", item.getEntityId());
         functionalRequirementRepository.deleteById(item.getEntityId());
-        log.info("✅ FunctionalRequirement deleted successfully");
+        log.info("FunctionalRequirement id={} deleted successfully", item.getEntityId());
     }
 
     // ---- NON FUNCTIONAL REQUIREMENT ----
@@ -438,28 +483,28 @@ public class ChangeRequestService {
     }
 
     private void createNonFunctionalReq(ChangeItem item, Project project) {
-        log.info("📝 CREATE NON_FUNCTIONAL_REQ");
+        log.info("Creating NonFunctionalRequirement");
         NonFunctionalRequirementPayloadDto dto = parseJson(item.getNewValue(), NonFunctionalRequirementPayloadDto.class);
         NonFunctionalRequirement req = nonFunctionalReqMapper.toEntity(dto);
         req.setProject(project);
         nonFunctionalRequirementRepository.save(req);
-        log.info("✅ NonFunctionalRequirement created successfully");
+        log.info("NonFunctionalRequirement created successfully");
     }
 
     private void updateNonFunctionalReq(ChangeItem item) {
-        log.info("✏️ UPDATE NON_FUNCTIONAL_REQ: {}", item.getEntityId());
+        log.info("Updating NonFunctionalRequirement id={}", item.getEntityId());
         NonFunctionalRequirement req = nonFunctionalRequirementRepository.findById(item.getEntityId())
                 .orElseThrow(() -> new EntityNotFoundException("NonFunctionalRequirement", item.getEntityId()));
         NonFunctionalRequirementPayloadDto dto = parseJson(item.getNewValue(), NonFunctionalRequirementPayloadDto.class);
         nonFunctionalReqMapper.updateEntity(dto, req);
         nonFunctionalRequirementRepository.save(req);
-        log.info("✅ NonFunctionalRequirement updated successfully");
+        log.info("NonFunctionalRequirement id={} updated successfully", item.getEntityId());
     }
 
     private void deleteNonFunctionalReq(ChangeItem item) {
-        log.info("🗑️ DELETE NON_FUNCTIONAL_REQ: {}", item.getEntityId());
+        log.info("Deleting NonFunctionalRequirement id={}", item.getEntityId());
         nonFunctionalRequirementRepository.deleteById(item.getEntityId());
-        log.info("✅ NonFunctionalRequirement deleted successfully");
+        log.info("NonFunctionalRequirement id={} deleted successfully", item.getEntityId());
     }
 
     // ---- BUSINESS RULE ----
@@ -473,28 +518,28 @@ public class ChangeRequestService {
     }
 
     private void createBusinessRule(ChangeItem item, Project project) {
-        log.info("📝 CREATE BUSINESS_RULE");
+        log.info("Creating BusinessRule");
         BusinessRulePayloadDto dto = parseJson(item.getNewValue(), BusinessRulePayloadDto.class);
         BusinessRule rule = businessRuleMapper.toEntity(dto);
         rule.setProject(project);
         businessRuleRepository.save(rule);
-        log.info("✅ BusinessRule created successfully");
+        log.info("BusinessRule created successfully");
     }
 
     private void updateBusinessRule(ChangeItem item) {
-        log.info("✏️ UPDATE BUSINESS_RULE: {}", item.getEntityId());
+        log.info("Updating BusinessRule id={}", item.getEntityId());
         BusinessRule rule = businessRuleRepository.findById(item.getEntityId())
                 .orElseThrow(() -> new EntityNotFoundException("BusinessRule", item.getEntityId()));
         BusinessRulePayloadDto dto = parseJson(item.getNewValue(), BusinessRulePayloadDto.class);
         businessRuleMapper.updateEntity(dto, rule);
         businessRuleRepository.save(rule);
-        log.info("✅ BusinessRule updated successfully");
+        log.info("BusinessRule id={} updated successfully", item.getEntityId());
     }
 
     private void deleteBusinessRule(ChangeItem item) {
-        log.info("🗑️ DELETE BUSINESS_RULE: {}", item.getEntityId());
+        log.info("Deleting BusinessRule id={}", item.getEntityId());
         businessRuleRepository.deleteById(item.getEntityId());
-        log.info("✅ BusinessRule deleted successfully");
+        log.info("BusinessRule id={} deleted successfully", item.getEntityId());
     }
 
     // ---- ACTOR ----
@@ -505,18 +550,18 @@ public class ChangeRequestService {
                 actor.setProject(project);
                 actor.setActorName(item.getFieldName());
                 actorRepository.save(actor);
-                log.info("✅ Actor created successfully");
+                log.info("Actor created successfully");
             }
             case "UPDATE" -> {
                 Actor actor = actorRepository.findById(item.getEntityId())
                         .orElseThrow(() -> new EntityNotFoundException("Actor", item.getEntityId()));
                 actor.setActorName(item.getFieldName());
                 actorRepository.save(actor);
-                log.info("✅ Actor updated successfully");
+                log.info("Actor id={} updated successfully", item.getEntityId());
             }
             case "DELETE" -> {
                 actorRepository.deleteById(item.getEntityId());
-                log.info("✅ Actor deleted successfully");
+                log.info("Actor id={} deleted successfully", item.getEntityId());
             }
             default -> throw new IllegalArgumentException("Unknown operation: " + item.getOperation());
         }
@@ -528,16 +573,16 @@ public class ChangeRequestService {
             case "UPDATE" -> {
                 Project project = projectRepository.findById(item.getEntityId())
                         .orElseThrow(() -> new ProjectNotFoundException("Project not found: " + item.getEntityId()));
-                log.info("✏️ UPDATE PROJECT: {}", item.getEntityId());
+                log.info("Updating Project id={}", item.getEntityId());
                 projectRepository.save(project);
-                log.info("✅ Project updated successfully");
+                log.info("Project id={} updated successfully", item.getEntityId());
             }
             case "DELETE" -> {
                 projectRepository.deleteById(item.getEntityId());
-                log.info("✅ Project deleted successfully");
+                log.info("Project id={} deleted successfully", item.getEntityId());
             }
             case "CREATE" -> {
-                log.warn("⚠️ CREATE PROJECT: This operation is not typically allowed via ChangeRequest");
+                log.warn("CREATE PROJECT via ChangeRequest is not allowed");
                 throw new IllegalArgumentException("Cannot create Project via ChangeRequest");
             }
             default -> throw new IllegalArgumentException("Unknown operation: " + item.getOperation());

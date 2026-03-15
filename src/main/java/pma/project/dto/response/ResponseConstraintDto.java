@@ -9,5 +9,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ResponseConstraintDto {
     private Integer constraintId;
+    private String type;
     private String description;
 }

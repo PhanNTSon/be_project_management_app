@@ -16,8 +16,9 @@ public class UsecasePayloadDto {
     private String postcondition;
     private String exceptions;
     private String priority;
-    private Integer functionRelId;
+    private String actor;
+    private String functionRelId;
     private List<String> normalFlows;
     private List<String> alterFlows;
-    private List<Integer> linkedBusinessRuleIds;
+    private List<String> linkedBusinessRuleIds;
 }
