@@ -23,4 +23,5 @@ public class ResponseUsecaseDto {
     private List<String> normalFlows;
     private List<String> alterFlows;
     private List<Integer> linkedBusinessRuleIds;
+    private String diagramUrl;
 }

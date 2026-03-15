@@ -10,7 +10,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import lombok.RequiredArgsConstructor;
-import pma.project.dto.request.RequestCreateProjectDto;
+import pma.project.dto.request.*;
 import pma.project.dto.response.*;
 import pma.project.service.ProjectService;
 
@@ -66,6 +66,16 @@ public class ProjectController {
     @GetMapping("/{projectId}/context-diagram")
     public ResponseEntity<String> getContextDiagramUrl(@PathVariable Integer projectId) {
         return ResponseEntity.ok(projectService.getContextDiagramUrl(projectId));
+    }
+
+    @PutMapping("/{projectId}/context-diagram")
+    public ResponseEntity<Void> updateContextDiagramUrl(
+            @PathVariable Integer projectId,
+            @Valid @RequestBody RequestUpdateContextDiagramDto dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = getCurrentUserId(userDetails);
+        projectService.updateContextDiagramUrl(userId, projectId, dto);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/{projectId}/vision-scopes")

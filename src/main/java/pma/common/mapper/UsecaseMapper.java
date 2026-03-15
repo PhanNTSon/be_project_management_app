@@ -19,6 +19,7 @@ public interface UsecaseMapper {
     @Mapping(target = "normalFlows", ignore = true)
     @Mapping(target = "alterFlows", ignore = true)
     @Mapping(target = "linkedBusinessRuleIds", ignore = true)
+    @Mapping(target = "diagramUrl", ignore = true)
     ResponseUsecaseDto toDto(Usecase usecase);
 
     List<ResponseUsecaseDto> toDtoList(List<Usecase> usecases);
@@ -34,6 +35,8 @@ public interface UsecaseMapper {
     @Mapping(target = "normalFlows", ignore = true)
     @Mapping(target = "alterFlows", ignore = true)
     @Mapping(target = "linkedBusinessRuleIds", ignore = true)
+    @Mapping(target = "actor", ignore = true)
+    @Mapping(target = "diagramUrl", ignore = true)
     UsecasePayloadDto toPayloadDto(Usecase usecase);
 
     @Mapping(target = "usecaseId", ignore = true)
