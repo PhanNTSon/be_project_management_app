@@ -8,4 +8,6 @@ import pma.project.entity.usecase.UsecaseBusinessRuleId;
 
 @Repository
 public interface UsecaseBusinessRuleRepository extends JpaRepository<UsecaseBusinessRule, UsecaseBusinessRuleId> {
+    void deleteByUsecase_UsecaseId(Integer usecaseId);
 }
+

@@ -7,4 +7,6 @@ import pma.project.entity.usecase.UsecaseFlow;
 
 @Repository
 public interface UsecaseFlowRepository extends JpaRepository<UsecaseFlow, Integer> {
+    void deleteByUsecase_UsecaseId(Integer usecaseId);
 }
+
