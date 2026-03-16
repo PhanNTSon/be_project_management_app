@@ -1,0 +1,88 @@
+package pma.user.controller;
+
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import jakarta.validation.Valid;
+import lombok.AllArgsConstructor;
+import pma.user.dto.LoginResultDto;
+import pma.user.dto.RefreshResultDto;
+import pma.user.dto.request.RequestLoginDto;
+import pma.user.dto.request.RequestRegisterDto;
+import pma.user.dto.response.ResponseLoginDto;
+import pma.user.dto.response.ResponseLogoutDto;
+import pma.user.dto.response.ResponseRefreshTokenDto;
+import pma.user.service.AuthService;
+
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
+@RestController
+@RequestMapping("/api/auth")
+@AllArgsConstructor
+public class AuthController {
+
+        private final AuthService authService;
+
+        @PostMapping("/register")
+        public ResponseEntity<String> postRegisterUserEntity(@Valid @RequestBody RequestRegisterDto registerDto) {
+                authService.registerUser(registerDto);
+                return ResponseEntity.ok("Register successfully");
+        }
+
+        @PostMapping("/login")
+        public ResponseEntity<ResponseLoginDto> postLoginUserEntity(@Valid @RequestBody RequestLoginDto loginDto) {
+                LoginResultDto loginResult = authService.loginUser(loginDto);
+
+                ResponseCookie springCookie = ResponseCookie.from("refresh_token", loginResult.getRefreshToken())
+                                .httpOnly(true)
+                                .secure(false) // Set thành true nếu chạy HTTPS
+                                .sameSite("Lax")
+                                .path("/")
+                                .maxAge(7 * 24 * 60 * 60) // 7 ngày
+                                .build();
+
+                ResponseLoginDto response = new ResponseLoginDto(
+                                loginResult.getAccessToken(),
+                                "Bearer");
+                return ResponseEntity.ok()
+                                .header(HttpHeaders.SET_COOKIE, springCookie.toString())
+                                .body(response);
+        }
+
+        @PostMapping("/refresh-token")
+        public ResponseEntity<ResponseRefreshTokenDto> postRefreshTokenEntity(
+                        @CookieValue("refresh_token") String refreshToken) {
+
+                RefreshResultDto refreshResult = authService.refreshAccessToken(refreshToken);
+                ResponseRefreshTokenDto response = new ResponseRefreshTokenDto(refreshResult.getNewAccessToken());
+
+                return ResponseEntity.ok().body(response);
+        }
+
+        @PostMapping("/logout")
+        public ResponseEntity<ResponseLogoutDto> postLogoutUserEntity(
+                @CookieValue("refresh_token") String refreshToken) {
+
+                authService.logoutUser(refreshToken);
+
+                ResponseCookie deleteCookie = ResponseCookie.from("refresh_token", "")
+                                .httpOnly(true)
+                                .secure(false) // Set thành true nếu chạy HTTPS
+                                .sameSite("Lax")
+                                .path("/")
+                                .maxAge(0)
+                                .build();
+
+                ResponseLogoutDto response = new ResponseLogoutDto("Logout successfully");
+
+                return ResponseEntity.ok()
+                                .header(HttpHeaders.SET_COOKIE, deleteCookie.toString())
+                                .body(response);
+        }
+
+}
