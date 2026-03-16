@@ -241,17 +241,91 @@ public class AuthServiceTest {
     // ==========================================
 
     @Test
-    void logoutUser_ShouldDeleteRefreshToken() {
+    void logoutUser_TokenNotFound_ShouldThrowException() {
 
         // Arrange
-        String refreshToken = "token123";
+        String refreshToken = "invalid";
+        String tokenHash = "hashedInvalid";
+
+        when(refreshTokenService.hashToken(refreshToken))
+                .thenReturn(tokenHash);
+
+        when(refreshTokenRepo.findByTokenHash(tokenHash))
+                .thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(
+                InvalidRefreshTokenException.class,
+                () -> authService.logoutUser(refreshToken));
+
+        verify(refreshTokenRepo, never()).delete(any());
+    }
+
+    @Test
+    void logoutUser_ExpiredToken_ShouldDeleteAndThrow() {
+
+        // Arrange
+        String refreshToken = "expired";
+        String tokenHash = "hashedExpired";
+
+        User user = new User(
+                "test@email.com",
+                "testuser",
+                "password123");
+
+        RefreshToken token = spy(new RefreshToken(
+                user,
+                tokenHash,
+                LocalDateTime.now().plusDays(1)));
+
+        doReturn(true).when(token).isExpired();
+
+        when(refreshTokenService.hashToken(refreshToken))
+                .thenReturn(tokenHash);
+
+        when(refreshTokenRepo.findByTokenHash(tokenHash))
+                .thenReturn(Optional.of(token));
+
+        // Act & Assert
+        assertThrows(
+                ExpiredRefreshTokenException.class,
+                () -> authService.logoutUser(refreshToken));
+
+        // Verify expired token was deleted
+        verify(refreshTokenRepo).delete(token);
+    }
+
+    @Test
+    void logoutUser_ValidToken_ShouldDeleteSuccessfully() {
+
+        // Arrange
+        String refreshToken = "validRefreshToken";
+        String tokenHash = "hashedRefreshToken";
+
+        User user = new User(
+                "test@email.com",
+                "testuser",
+                "password123");
+
+        RefreshToken storedRefreshToken = new RefreshToken(
+                user,
+                tokenHash,
+                LocalDateTime.now().plusDays(7)); // Token vẫn còn hạn
+
+        // ✅ Mock: hash của refresh token
+        when(refreshTokenService.hashToken(refreshToken))
+                .thenReturn(tokenHash);
+
+        // ✅ Mock: tìm refresh token trong DB
+        when(refreshTokenRepo.findByTokenHash(tokenHash))
+                .thenReturn(Optional.of(storedRefreshToken));
 
         // Act
         authService.logoutUser(refreshToken);
 
         // Assert
-        verify(refreshTokenRepo, times(1))
-                .deleteByTokenHash(refreshToken);
+        // ✅ Token phải được xóa từ DB
+        verify(refreshTokenRepo).delete(storedRefreshToken);
     }
 
     // ==========================================

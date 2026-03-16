@@ -115,11 +115,25 @@ public class AuthService {
     /**
      * Xử lý đăng xuất thông qua Refresh Token đang dùng.
      * Việc xóa token khỏi CSDL sẽ vô hiệu hóa chuỗi cấp phát Access Token mới.
+     * Kiểm tra token hợp lệ và chưa hết hạn trước khi xóa.
      */
     @Transactional
     public void logoutUser(String refreshToken) {
-        // Xóa cứng Refresh Token khỏi DB dựa trên đoạn hash của token
-        refreshTokenRepo.deleteByTokenHash(refreshToken);
+        // 1. Băm khóa token thô lấy từ client để truy vấn DB
+        String tokenHash = refreshTokenService.hashToken(refreshToken);
+
+        // 2. Lấy bản ghi tồn tại trong hệ thống, ném lỗi token không hợp lệ nếu không có
+        RefreshToken rt = refreshTokenRepo.findByTokenHash(tokenHash)
+                .orElseThrow(() -> new InvalidRefreshTokenException());
+
+        // 3. Kiểm tra Refresh Token hết hạn chưa. Nếu đã hạn, thu hồi từ DB và ném lỗi.
+        if (rt.isExpired()) {
+            refreshTokenRepo.delete(rt);
+            throw new ExpiredRefreshTokenException();
+        }
+
+        // 4. Xóa token từ DB
+        refreshTokenRepo.delete(rt);
     }
 
     /**

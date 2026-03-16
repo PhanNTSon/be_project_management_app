@@ -10,6 +10,7 @@ import pma.user.dto.RefreshResultDto;
 import pma.user.dto.request.RequestLoginDto;
 import pma.user.dto.request.RequestRegisterDto;
 import pma.user.dto.response.ResponseLoginDto;
+import pma.user.dto.response.ResponseLogoutDto;
 import pma.user.dto.response.ResponseRefreshTokenDto;
 import pma.user.service.AuthService;
 
@@ -64,19 +65,24 @@ public class AuthController {
         }
 
         @PostMapping("/logout")
-        public ResponseEntity<String> postLogoutUserEntity(@RequestBody String entity) {
-                authService.logoutUser(entity);
+        public ResponseEntity<ResponseLogoutDto> postLogoutUserEntity(
+                @CookieValue("refresh_token") String refreshToken) {
+
+                authService.logoutUser(refreshToken);
+
                 ResponseCookie deleteCookie = ResponseCookie.from("refresh_token", "")
                                 .httpOnly(true)
-                                .secure(false)
+                                .secure(false) // Set thành true nếu chạy HTTPS
                                 .sameSite("Lax")
                                 .path("/")
                                 .maxAge(0)
                                 .build();
 
+                ResponseLogoutDto response = new ResponseLogoutDto("Logout successfully");
+
                 return ResponseEntity.ok()
                                 .header(HttpHeaders.SET_COOKIE, deleteCookie.toString())
-                                .body("Logout successfully");
+                                .body(response);
         }
 
 }
