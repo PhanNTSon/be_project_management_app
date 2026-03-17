@@ -19,10 +19,14 @@ services:
     # Wait for the database to be ready and then create the required database
     command: >
       /bin/bash -c "
-        echo 'Waiting for MS SQL to be ready...'
-        sleep 20s
-        /opt/mssql-tools/bin/sqlcmd -S database -U ${DB_USERNAME} -P '${DB_PASSWORD}' -Q 'IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = ''SRS_SMART_MANAGEMENT_DB'') BEGIN CREATE DATABASE SRS_SMART_MANAGEMENT_DB; END'
-        echo 'Database initialization complete.'
+        until /opt/mssql-tools/bin/sqlcmd -S database -U ${DB_USERNAME} -P '${DB_PASSWORD}' -Q 'SELECT 1';
+        do
+          echo 'Waiting for SQL Server...';
+          sleep 2;
+        done;
+        echo 'SQL Server is ready. Initializing database...';
+        /opt/mssql-tools/bin/sqlcmd -S database -U ${DB_USERNAME} -P '${DB_PASSWORD}' -Q \"IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'SRS_SMART_MANAGEMENT_DB') BEGIN CREATE DATABASE SRS_SMART_MANAGEMENT_DB; END\";
+        echo 'Database initialization complete.';
       "
 
   backend:
@@ -33,8 +37,8 @@ services:
     environment:
       # Map container name as host in SPRING_DATASOURCE_URL
       - SPRING_DATASOURCE_URL=jdbc:sqlserver://database:1433;databaseName=SRS_SMART_MANAGEMENT_DB;encrypt=true;trustServerCertificate=true
-      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
-      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
       - SECRET_KEY_BASE64=${SECRET_KEY_BASE64}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
     depends_on:
