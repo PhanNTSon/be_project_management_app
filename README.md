@@ -21,12 +21,11 @@ This is the backend backend API for the Project Management Application. It provi
    Ensure you have a local MS SQL Server instance running with a database named `SRS_SMART_MANAGEMENT_DB`.
 
 2. **Environment Variables / Properties:**
-   Ensure you have a `.env` file configured in this directory:
+   Create a `.env` file in this directory with the following variables used by both Docker and local execution:
    ```env
-   SECRET_KEY_BASE64="Your_Secret_Key_Base64_Encoded"
-   SPRING_DATASOURCE_URL=jdbc:sqlserver://localhost:1433;databaseName=SRS_SMART_MANAGEMENT_DB;encrypt=true;trustServerCertificate=true
-   SPRING_DATASOURCE_USERNAME=sa
-   SPRING_DATASOURCE_PASSWORD=your_password
+   DB_USERNAME=sa
+   DB_PASSWORD=sa_Password123!
+   SECRET_KEY_BASE64=Your_Secret_Key_Base64_Encoded
    GEMINI_API_KEY=your_gemini_api_key
    ```
 
@@ -39,16 +38,23 @@ This is the backend backend API for the Project Management Application. It provi
 
 ## 🐳 Running via Docker (Recommended)
 
-To run the entire ecosystem seamlessly without installing MS SQL Server or Java locally, use Docker Compose from the **root workspace directory** (one level above this folder):
+To run the Backend and its required MS SQL Server Database seamlessly without installing local dependencies, use the included Docker Compose setup:
 
-```bash
-docker-compose up -d --build
-```
+1. **Configure Environment:** Ensure your `.env` file is present in this directory with `DB_USERNAME`, `DB_PASSWORD`, `SECRET_KEY_BASE64`, and `GEMINI_API_KEY`.
+2. **Navigate to the root directory of this backend repository.**
+3. **Run Docker Compose:**
+   ```bash
+   docker-compose up -d --build
+   ```
 
-- This command will spin up the Backend API, the Frontend Web App, and an MS SQL Server database.
+**Expected Output & Behavior:**
+- Docker will spin up the `backend` container, an `mssql` database container, and a temporary `db-init` container.
 - The `SRS_SMART_MANAGEMENT_DB` database is automatically created upon startup.
-- The Backend API will be available at `http://localhost:8080`.
-- To view logs: `docker-compose logs -f backend`
+- The Backend API will be successfully built and served at `http://localhost:8080`.
+- The Database is accessible on standard port `1433` using your configured credentials.
+
+**Useful Commands:**
+- To view logs of the backend explicitly: `docker logs -f project-management-app-backend-1` (or whatever your folder prefix is, e.g., `docker-compose logs -f backend`).
 - To stop the containers: `docker-compose down`
 
 ## 📦 Building the JAR
