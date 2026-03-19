@@ -136,7 +136,7 @@ public class ProjectServiceTest {
         u.setUsecaseName("UC Name");
         u.setPriority("HIGH");
         
-        when(usecaseRepository.findByProject_ProjectId(projectId)).thenReturn(Arrays.asList(u));
+        when(usecaseRepository.findAllWithDetailsByProjectId(projectId)).thenReturn(Arrays.asList(u));
 
         List<ResponseUsecaseDto> result = projectService.getUsecases(projectId);
 

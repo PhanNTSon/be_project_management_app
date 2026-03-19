@@ -22,6 +22,9 @@ public class JwtService {
     @Value("${jwt.secret}")
     private String SECRET_KEY;
 
+    @Value("${jwt.expiration}")
+    private long jwtExpiration;
+
     // Đối tượng Khóa bí mật dùng để ký và giải mã JWT (Theo chuẩn HMAC-SHA)
     private SecretKey signingKey;
 
@@ -85,7 +88,7 @@ public class JwtService {
         return Jwts.builder()
                 .subject(username) // Bộ dữ liệu định danh người dùng mặc định
                 .issuedAt(new Date(System.currentTimeMillis())) // Thời điểm cấp phát
-                .expiration(new Date(System.currentTimeMillis() + 86400000)) // Thời điểm hết hạn (24h = 86400000ms)
+                .expiration(new Date(System.currentTimeMillis() + jwtExpiration)) // Thời điểm hết hạn
                 .signWith(getSigningKey()) // Thuật toán HS256 sẽ tự động được chọn dựa trên SecretKey
                 .compact(); // Đóng gói thành chuỗi String an toàn mang gửi qua đường truyền web
     }

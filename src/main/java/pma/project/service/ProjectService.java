@@ -18,8 +18,6 @@ import pma.common.exception.CustomException.UserNotFoundException;
 import pma.project.entity.core.*;
 import pma.project.entity.member.ProjectMember;
 import pma.project.entity.usecase.Usecase;
-import pma.project.entity.usecase.UsecaseActor;
-import pma.project.entity.usecase.UsecaseBusinessRule;
 import pma.project.entity.usecase.UsecaseFlow;
 import pma.project.repository.*;
 import pma.user.entity.User;
@@ -42,9 +40,6 @@ public class ProjectService {
     private final ProjectRoleRepository projectRoleRepository;
 
     // Child-table repos for usecase enrichment
-    private final UsecaseFlowRepository usecaseFlowRepository;
-    private final UsecaseBusinessRuleRepository usecaseBusinessRuleRepository;
-    private final UsecaseActorRepository usecaseActorRepository;
     private final UsecaseDiagramUrlRepository usecaseDiagramUrlRepository;
 
     // --- Mappers ---
@@ -83,7 +78,7 @@ public class ProjectService {
     }
 
     public List<ResponseUsecaseDto> getUsecases(Integer projectId) {
-        return usecaseRepository.findByProject_ProjectId(projectId).stream()
+        return usecaseRepository.findAllWithDetailsByProjectId(projectId).stream()
                 .map(this::toEnrichedUsecaseDto)
                 .collect(Collectors.toList());
     }
@@ -193,8 +188,10 @@ public class ProjectService {
     // =====================================================================
 
     /**
-     * Enriches a Usecase entity into a full ResponseUsecaseDto by joining
-     * UsecaseFlow, UsecaseBusinessRule, and UsecaseActor child tables.
+     * Enriches a Usecase entity into a full ResponseUsecaseDto.
+     * Child-collections (flows, actors, businessRules) are already pre-loaded
+     * by the JOIN FETCH query in UsecaseRepository — no extra DB calls needed.
+     * Only diagramUrl requires an extra look-up because of the @OneToOne mapping.
      */
     private ResponseUsecaseDto toEnrichedUsecaseDto(Usecase uc) {
         ResponseUsecaseDto dto = usecaseMapper.toDto(uc);
@@ -204,31 +201,29 @@ public class ProjectService {
             dto.setFunctionRelId(uc.getFunctionalRequirement().getRequirementId());
         }
 
-        Integer id = uc.getUsecaseId();
-
-        // normalFlows and alterFlows — from UsecaseFlow child table
-        List<UsecaseFlow> flows = usecaseFlowRepository.findByUsecase_UsecaseId(id);
-        dto.setNormalFlows(flows.stream()
+        // normalFlows and alterFlows — already in-memory, no DB call
+        dto.setNormalFlows(uc.getFlows().stream()
                 .filter(f -> "NORMAL".equals(f.getFlowType()))
                 .map(UsecaseFlow::getDescription)
                 .collect(Collectors.toList()));
-        dto.setAlterFlows(flows.stream()
+        dto.setAlterFlows(uc.getFlows().stream()
                 .filter(f -> "ALTERNATIVE".equals(f.getFlowType()))
                 .map(UsecaseFlow::getDescription)
                 .collect(Collectors.toList()));
 
-        // linkedBusinessRuleIds — from UsecaseBusinessRule join table
-        List<UsecaseBusinessRule> brLinks = usecaseBusinessRuleRepository.findByUsecase_UsecaseId(id);
-        dto.setLinkedBusinessRuleIds(brLinks.stream()
+        // linkedBusinessRuleIds — already in-memory
+        dto.setLinkedBusinessRuleIds(uc.getUsecaseBusinessRules().stream()
                 .map(link -> link.getBusinessRule().getRuleId())
                 .collect(Collectors.toList()));
 
         // actor — first linked Actor's name (frontend treats actor as a single string)
-        List<UsecaseActor> actorLinks = usecaseActorRepository.findByUsecase_UsecaseId(id);
-        dto.setActor(actorLinks.isEmpty() ? "" : actorLinks.get(0).getActor().getActorName());
+        dto.setActor(uc.getUsecaseActors().isEmpty()
+                ? ""
+                : uc.getUsecaseActors().get(0).getActor().getActorName());
 
-        // diagramUrl — from UsecaseDiagramUrl mapped entity
-        usecaseDiagramUrlRepository.findById(id).ifPresent(diagram -> dto.setDiagramUrl(diagram.getDiagramUrl()));
+        // diagramUrl — @OneToOne, still needs 1 query per usecase but is unavoidable
+        usecaseDiagramUrlRepository.findById(uc.getUsecaseId())
+                .ifPresent(diagram -> dto.setDiagramUrl(diagram.getDiagramUrl()));
 
         return dto;
     }

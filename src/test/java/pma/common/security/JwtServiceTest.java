@@ -30,6 +30,7 @@ public class JwtServiceTest {
         // Chuỗi Secret phải là chuỗi Base64 hợp lệ độ dài đủ 256 bits trở lên
         String validBase64Secret = "YmFzZTY0LWVuY29kZWQtc2VjcmV0LWtleS1tdXN0LWJlLWF0LWxlYXN0LTMyLWJ5dGVz";
         ReflectionTestUtils.setField(jwtService, "SECRET_KEY", validBase64Secret);
+        ReflectionTestUtils.setField(jwtService, "jwtExpiration", 86400000L);
         jwtService.init();
     }
 

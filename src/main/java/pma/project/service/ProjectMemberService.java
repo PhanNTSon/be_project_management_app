@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pma.common.exception.ApiException;
+import pma.common.sse.SseEmitterService;
 import pma.project.dto.request.RequestCreateInvitationDto;
 import pma.project.dto.response.ResponseInvitationDto;
 import pma.project.dto.response.ResponseMemberDto;
@@ -35,11 +36,7 @@ public class ProjectMemberService {
     private final ProjectInvitationRepository projectInvitationRepository;
     private final ProjectRoleRepository projectRoleRepository;
     private final UserRepo userRepository;
-
-    private Project getProjectOrThrow(Integer projectId) {
-        return projectRepository.findById(projectId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Project not found"));
-    }
+    private final SseEmitterService sseEmitterService;
 
     private ProjectMember getMemberOrThrow(Integer projectId, Long userId) {
         return projectMemberRepository.findByProject_ProjectIdAndUser_UserId(projectId, userId)
@@ -97,7 +94,8 @@ public class ProjectMemberService {
         ProjectMember authMember = getMemberOrThrow(projectId, authUserId);
         checkIsOwner(authMember);
 
-        Project project = getProjectOrThrow(projectId);
+        // Lấy project qua navigation thay vì gọi thêm 1 DB query nữa
+        Project project = authMember.getProject();
 
         boolean exists = projectInvitationRepository.existsByProject_ProjectIdAndEmailAndStatus(projectId, dto.getEmail(), "Pending");
         if (exists) {
@@ -109,14 +107,25 @@ public class ProjectMemberService {
         inv.setEmail(dto.getEmail());
         inv.setStatus("Pending");
         inv.setSentAt(java.time.LocalDateTime.now());
+        final ProjectInvitation savedInv = projectInvitationRepository.save(inv);
 
-        inv = projectInvitationRepository.save(inv);
+        // Gửi SSE event cho user có email này nếu họ đang online
+        userRepository.findByEmail(dto.getEmail()).ifPresent(targetUser ->
+                sseEmitterService.sendEventToUser(
+                        targetUser.getUserId(),
+                        "INVITATION_RECEIVED",
+                        java.util.Map.of(
+                                "invitationId", savedInv.getInvitationId(),
+                                "projectId",    projectId,
+                                "projectName",  project.getProjectName()
+                        )
+                ));
 
         return ResponseInvitationDto.builder()
-                .invitationId(inv.getInvitationId())
-                .email(inv.getEmail())
-                .status(inv.getStatus())
-                .sentAt(inv.getSentAt())
+                .invitationId(savedInv.getInvitationId())
+                .email(savedInv.getEmail())
+                .status(savedInv.getStatus())
+                .sentAt(savedInv.getSentAt())
                 .build();
     }
 
@@ -153,6 +162,16 @@ public class ProjectMemberService {
 
         targetMember.setProjectRole(newRole);
         projectMemberRepository.save(targetMember);
+
+        // Gửi SSE event cho user bị thay đổi role
+        sseEmitterService.sendEventToUser(
+                targetUserId,
+                "ROLE_UPDATED",
+                java.util.Map.of(
+                        "projectId", projectId,
+                        "newRole",   dto.getRoleName()
+                )
+        );
     }
 
     // =====================================================================

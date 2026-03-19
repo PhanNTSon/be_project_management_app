@@ -2,6 +2,7 @@ package pma.common.security;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -28,6 +29,9 @@ import lombok.RequiredArgsConstructor;
 public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
+
+    @Value("${frontend.urls}")
+    private List<String> frontendUrls;
 
     /**
      * Cấu hình luồng thực thi các chốt chặn Security (SecurityFilterChain).
@@ -73,8 +77,8 @@ public class SecurityConfig {
 
         CorsConfiguration config = new CorsConfiguration();
 
-        // Danh sách các cổng Frontend được whitelist (Ví dụ ứng dụng React/Vite local chạy gốc 5173)
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
+        // Danh sách các cổng Frontend được whitelist
+        config.setAllowedOrigins(frontendUrls);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true); // Cho phép đính kèm credentials

@@ -3,7 +3,27 @@
     {
       "name": "jwt.secret",
       "type": "java.lang.String",
-      "description": "Secret key used to sign and verify JWT tokens"
+      "description": "Secret key (Base64) used to sign and verify JWT tokens"
+    },
+    {
+      "name": "jwt.expiration",
+      "type": "java.lang.Long",
+      "description": "Access token expiration in milliseconds (default 86400000 = 24h)"
+    },
+    {
+      "name": "jwt.refresh.expiration.days",
+      "type": "java.lang.Long",
+      "description": "Refresh token expiration in days (default 7)"
+    },
+    {
+      "name": "frontend.urls",
+      "type": "java.util.List",
+      "description": "Comma-separated list of allowed CORS origins (frontend URLs)"
+    },
+    {
+      "name": "gemini.api.key",
+      "type": "java.lang.String",
+      "description": "Google Gemini API key for AI features"
     }
   ]
-}
+}

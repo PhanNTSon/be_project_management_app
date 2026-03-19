@@ -2,11 +2,11 @@ package pma.user.service;
 
 import java.time.LocalDateTime;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
-import lombok.AllArgsConstructor;
 import pma.common.exception.CustomException.EmailAlreadyExistException;
 import pma.common.exception.CustomException.ExpiredRefreshTokenException;
 import pma.common.exception.CustomException.InvalidPasswordException;
@@ -28,8 +28,10 @@ import pma.user.repository.RoleRepo;
 import pma.user.repository.UserRepo;
 import pma.user.repository.UserRoleRepo;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepo userRepo;
@@ -39,6 +41,9 @@ public class AuthService {
     private final RefreshTokenService refreshTokenService;
     private final RefreshTokenRepo refreshTokenRepo;
     private final UserRoleRepo userRoleRepo;
+
+    @Value("${jwt.refresh.expiration.days}")
+    private long refreshExpirationDays;
 
     /**
      * Xử lý logic đăng ký người dùng mới.
@@ -103,8 +108,8 @@ public class AuthService {
         // Băm Refresh Token để lưu database, tăng độ bảo mật nếu DB bị rò rỉ
         String refreshTokenHash = refreshTokenService.hashToken(rawToken);
 
-        // Tạo bản ghi RefreshToken mới với thời hạn hiệu lực 7 ngày và lưu vào DB
-        RefreshToken rt = new RefreshToken(user, refreshTokenHash, LocalDateTime.now().plusDays(7));
+        // Tạo bản ghi RefreshToken mới với thời hạn hiệu lực cấu hình và lưu vào DB
+        RefreshToken rt = new RefreshToken(user, refreshTokenHash, LocalDateTime.now().plusDays(refreshExpirationDays));
         refreshTokenRepo.save(rt);
 
         // Trả về kết quả hiển thị cho client (bao gồm thông tin user cơ bản và token

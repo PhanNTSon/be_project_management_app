@@ -9,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -51,16 +52,24 @@ public class JwtFilter extends OncePerRequestFilter {
         String authHeader = request.getHeader("Authorization");
 
         // 1. Kiểm tra header xem có chứa Bearer Token không
-        // Nếu không có Token hoặc sai định dạng thì lờ qua Filter đoạn này, đi tiếp đến Filter khác.
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        // Nếu không có Token hoặc sai định dạng thì kiểm tra query param (dùng cho SSE)
+        String jwt = null;
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            jwt = authHeader.substring(7);
+        } else {
+            // Fallback: lấy token từ query param '?token=...' (EventSource không gửi được header)
+            String tokenParam = request.getParameter("token");
+            if (tokenParam != null && !tokenParam.isBlank()) {
+                jwt = tokenParam;
+            }
+        }
+
+        if (jwt == null) {
             filterChain.doFilter(request, response);
             return;
         }
-
-        // 2. Tách chuỗi token ra khỏi chuỗi "Bearer " (Bắt đầu từ kí tự thứ 7)
-        String jwt = authHeader.substring(7);
         try {
-            // Giải mã token để lấy bộ khung Claims (dữ liệu payload)
+            // 2. Giải mã chuỗi JWT ra thành Claims (ném exception nếu token không hợp lệ)
             Claims claims = jwtService.parseToken(jwt);
 
             // Bóc tách Username ra khỏi Claims
@@ -81,7 +90,10 @@ public class JwtFilter extends OncePerRequestFilter {
                             null,
                             userDetails.getAuthorities());
 
-                    // Nạp Authentication đó vào ContextHolder. 
+                    // Gắn thêm thông tin request (IP, session ID) vào authentication token
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                    // Nạp Authentication đó vào ContextHolder.
                     // Bất kỳ đoạn logic nào phía sau cũng sẽ biết Request này đại diện cho "username" này.
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
